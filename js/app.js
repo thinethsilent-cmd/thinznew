@@ -644,7 +644,7 @@ async function loadBotPage() {
   activeUnsubscribes.trades = subscribeToTrades(state.user.uid, (trades) => {
     activeTradesList.innerHTML = "";
     if (trades.length === 0) {
-      activeTradesList.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-gray">No trades executed yet. Run the bot to auto-trade signals.</td></tr>`;
+      activeTradesList.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-gray">No trades executed yet. Run the bot to auto-trade signals.</td></tr>`;
       updateBotStats(0, 0, 0);
       return;
     }
@@ -665,13 +665,21 @@ async function loadBotPage() {
       const statusClass = trade.status === "WIN" ? "text-green" : trade.status === "LOSS" ? "text-red" : "text-yellow";
       const pnlSign = trade.pnl > 0 ? "+" : "";
       
+      const amt = trade.amount !== undefined ? trade.amount : 0.50;
+      const dollarPnl = trade.pnlAmount !== undefined ? trade.pnlAmount : (amt * (trade.pnl / 100));
+      const pnlText = trade.status !== "OPEN" ? `${pnlSign}$${Math.abs(dollarPnl).toFixed(2)} (${pnlSign}${trade.pnl.toFixed(2)}%)` : "Trading...";
+      const lev = trade.leverage || "15x";
+      const marginRisk = `$${amt.toFixed(2)}`;
+
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td class="py-3 px-4 font-medium">${trade.pair}</td>
         <td class="py-3 px-4"><span class="badge-${trade.direction.toLowerCase()}">${trade.direction}</span></td>
-        <td class="py-3 px-4">$${trade.entry}</td>
+        <td class="py-3 px-4 font-bold text-yellow">${lev}</td>
+        <td class="py-3 px-4 text-gray font-mono">${marginRisk}</td>
+        <td class="py-3 px-4 font-mono">$${trade.entry}</td>
         <td class="py-3 px-4 ${statusClass}">${trade.status}</td>
-        <td class="py-3 px-4 ${statusClass} font-medium">${trade.status !== "OPEN" ? pnlSign + trade.pnl + "%" : "Trading..."}</td>
+        <td class="py-3 px-4 ${statusClass} font-medium font-mono">${pnlText}</td>
       `;
       activeTradesList.appendChild(tr);
     });

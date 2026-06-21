@@ -7,6 +7,7 @@ import {
   where, 
   orderBy, 
   getDocs, 
+  getDoc,
   updateDoc, 
   doc, 
   runTransaction
@@ -98,8 +99,8 @@ export function startAutoTrading(userId, premiumStatus, onTradeLogged) {
         if (tradeSnap.empty && signal.status === "Pending") {
           // Trigger mock trade execution
           console.log(`Auto Trading: Executing trade for ${signal.pair}`);
-          await logTrade(userId, signal);
-          if (onTradeLogged) onTradeLogged(`Executed order for ${signal.pair} (${signal.direction}) at $${signal.entry}`);
+          const lev = await logTrade(userId, signal);
+          if (onTradeLogged) onTradeLogged(`Executed order for ${signal.pair} (${signal.direction}) at $${signal.entry} (${lev}x Leverage, Margin $0.50)`);
         }
       } 
       
@@ -181,8 +182,8 @@ export function startAutoTrading(userId, premiumStatus, onTradeLogged) {
           
           if (availableSignals.length > 0) {
             const signalToTrade = availableSignals[Math.floor(Math.random() * availableSignals.length)];
-            await logTrade(userId, signalToTrade);
-            if (onTradeLogged) onTradeLogged(`Auto-Trading: Executed order for ${signalToTrade.pair} (${signalToTrade.direction}) at $${signalToTrade.entry}`);
+            const lev = await logTrade(userId, signalToTrade);
+            if (onTradeLogged) onTradeLogged(`Auto-Trading: Executed order for ${signalToTrade.pair} (${signalToTrade.direction}) at $${signalToTrade.entry} (${lev}x Leverage, Margin $0.50)`);
           } else {
             // Generate a simulated dynamic market opportunity
             const pairs = ["LINK/USDT", "AVAX/USDT", "DOGE/USDT", "XRP/USDT", "NEAR/USDT"];
@@ -197,8 +198,8 @@ export function startAutoTrading(userId, premiumStatus, onTradeLogged) {
               stopLoss: "5",
               status: "Pending"
             };
-            await logTrade(userId, simulatedSignal);
-            if (onTradeLogged) onTradeLogged(`Market alert: Opening auto position for ${simulatedSignal.pair} at $${simulatedSignal.entry}`);
+            const lev = await logTrade(userId, simulatedSignal);
+            if (onTradeLogged) onTradeLogged(`Market alert: Opening auto position for ${simulatedSignal.pair} at $${simulatedSignal.entry} (${lev}x Leverage, Margin $0.50)`);
           }
         }
       }
@@ -223,6 +224,7 @@ export function stopAutoTrading() {
 // Log execution of trade in Firestore
 async function logTrade(userId, signal) {
   try {
+    const leverage = Math.floor(Math.random() * (25 - 10 + 1)) + 10; // 10x to 25x
     const tradeData = {
       userId,
       signalId: signal.id,
@@ -232,15 +234,20 @@ async function logTrade(userId, signal) {
       target: signal.targets[0],
       stopLoss: signal.stopLoss,
       status: "OPEN",
-      amount: 100, // 100 USDT simulation sizing
+      amount: 0.5, // $0.50 USDT margin
+      leverage: leverage + "x",
+      riskPerTrade: 0.5, // $0.50 USDT risk
       pnl: 0,
+      pnlAmount: 0,
       executedAt: new Date().toISOString(),
       closedAt: null
     };
     
     await addDoc(collection(db, "trades"), tradeData);
+    return leverage;
   } catch (error) {
     console.error("Error logging trade:", error);
+    return 15;
   }
 }
 
@@ -248,15 +255,30 @@ async function logTrade(userId, signal) {
 async function closeTrade(userId, tradeDocId, resultStatus) {
   try {
     const tradeRef = doc(db, "trades", tradeDocId);
+    const tradeSnap = await getDoc(tradeRef);
+    if (!tradeSnap.exists()) return;
     
-    // Simulate Profit / Loss percentages
+    const tradeData = tradeSnap.data();
+    const leverage = parseInt(tradeData.leverage) || 15;
+    const amount = tradeData.amount || 0.5;
+    
     const isWin = resultStatus === "Win";
-    const pnlPercent = isWin ? (Math.random() * 15 + 5) : -(Math.random() * 5 + 3); // Win: +5% to +20%, Loss: -3% to -8%
+    // Price movement percent: Win: 1.5% to 4.5%, Loss: -1.5% to -3.5%
+    const priceChangePct = isWin ? (Math.random() * 3.0 + 1.5) : -(Math.random() * 2.0 + 1.5);
+    
+    // Leveraged PnL percent
+    let pnlPercent = priceChangePct * leverage;
+    if (!isWin && pnlPercent < -100) {
+      pnlPercent = -100; // Liquidated / capped at full margin loss
+    }
+    
     const pnlVal = parseFloat(pnlPercent.toFixed(2));
+    const pnlAmountVal = parseFloat((amount * (pnlVal / 100)).toFixed(4));
     
     await updateDoc(tradeRef, {
       status: isWin ? "WIN" : "LOSS",
       pnl: pnlVal,
+      pnlAmount: pnlAmountVal,
       closedAt: new Date().toISOString()
     });
 
