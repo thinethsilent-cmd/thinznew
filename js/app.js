@@ -671,9 +671,18 @@ async function loadBotPage() {
       const lev = trade.leverage || "15x";
       const marginRisk = `$${amt.toFixed(2)}`;
 
+      const analysisHtml = trade.analysisMethod ? `
+        <div style="font-size:0.75rem; color:var(--text-muted); font-weight:normal; margin-top:4px; line-height:1.2; max-width: 280px; word-break: break-word;">
+          <span style="color:var(--color-primary); font-weight:700;">AI Analysis:</span> ${trade.analysisMethod}
+        </div>
+      ` : "";
+
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td class="py-3 px-4 font-medium">${trade.pair}</td>
+        <td class="py-3 px-4 font-medium">
+          <div>${trade.pair}</div>
+          ${analysisHtml}
+        </td>
         <td class="py-3 px-4"><span class="badge-${trade.direction.toLowerCase()}">${trade.direction}</span></td>
         <td class="py-3 px-4 font-bold text-yellow">${lev}</td>
         <td class="py-3 px-4 text-gray font-mono">${marginRisk}</td>

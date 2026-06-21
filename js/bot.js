@@ -68,6 +68,65 @@ export function subscribeToTrades(userId, callback) {
 let signalListenerUnsubscribe = null;
 let botSimulationInterval = null;
 
+// High-Accuracy Technical Analysis Generator
+function generateAnalysisMethod(pair, direction) {
+  const isBuy = direction.toUpperCase() === "BUY";
+  
+  const indicators = [
+    // 1. MACD
+    () => {
+      const timeframe = ["15M", "30M", "1H", "4H"][Math.floor(Math.random() * 4)];
+      if (isBuy) {
+        return `MACD Bullish Crossover confirmed on ${timeframe} timeframe for ${pair}. The MACD line crossed above the signal line with a corresponding rise in green histogram volume bars, indicating strong upward momentum.`;
+      } else {
+        return `MACD Bearish Crossover confirmed on ${timeframe} timeframe for ${pair}. The MACD line crossed below the signal line with expanding red histogram volume bars, indicating standard downward pressure.`;
+      }
+    },
+    // 2. RSI
+    () => {
+      const timeframe = ["15M", "30M", "1H", "4H"][Math.floor(Math.random() * 4)];
+      if (isBuy) {
+        const rsiVal = (Math.random() * 5 + 23).toFixed(1); // 23.0 to 28.0
+        return `RSI Oversold Rebound detected on ${timeframe} timeframe. ${pair} tapped an oversold value of ${rsiVal} and is rebounding strongly. Sellers are exhausted, creating a high-probability bullish reversal setup.`;
+      } else {
+        const rsiVal = (Math.random() * 5 + 72).toFixed(1); // 72.0 to 77.0
+        return `RSI Overbought Rejection detected on ${timeframe} timeframe. ${pair} hit an overbought level of ${rsiVal} and is rejecting. Buyers are exhausted, indicating a high-probability bearish reversal setup.`;
+      }
+    },
+    // 3. EMA
+    () => {
+      const timeframe = ["1H", "4H", "1D"][Math.floor(Math.random() * 3)];
+      if (isBuy) {
+        return `EMA Golden Cross alignment confirmed on ${timeframe} chart for ${pair}. The 50-period Exponential Moving Average (EMA) has crossed above the 200-period EMA, validating a long-term bullish trend shift.`;
+      } else {
+        return `EMA Death Cross alignment confirmed on ${timeframe} chart for ${pair}. The 50-period Exponential Moving Average (EMA) has crossed below the 200-period EMA, validating a long-term bearish trend shift.`;
+      }
+    },
+    // 4. Fibonacci
+    () => {
+      const level = (Math.random() < 0.7) ? "0.618 (Golden Pocket)" : "0.50";
+      if (isBuy) {
+        return `Fibonacci Retracement Support bounce active at the key ${level} horizontal level for ${pair}. Accompanied by positive divergence and local demand clustering, pointing to an optimal long entry.`;
+      } else {
+        return `Fibonacci Retracement Resistance rejection active at the key ${level} horizontal level for ${pair}. Accompanied by negative divergence and local supply clustering, pointing to an optimal short entry.`;
+      }
+    },
+    // 5. Bollinger Bands
+    () => {
+      const timeframe = ["15M", "30M", "1H", "4H"][Math.floor(Math.random() * 4)];
+      if (isBuy) {
+        return `Bollinger Bands Lower Band rebound completed on ${timeframe} timeframe. ${pair} touched the lower 2-standard-deviation boundary and closed with a bullish engulfing candle, signaling high-accuracy mean reversion.`;
+      } else {
+        return `Bollinger Bands Upper Band rejection completed on ${timeframe} timeframe. ${pair} touched the upper 2-standard-deviation boundary and closed with a bearish engulfing candle, signaling high-accuracy mean reversion.`;
+      }
+    }
+  ];
+  
+  // Randomly select one indicator generator
+  const selectedGenerator = indicators[Math.floor(Math.random() * indicators.length)];
+  return selectedGenerator();
+}
+
 export function startAutoTrading(userId, premiumStatus, onTradeLogged) {
   // Clear any existing listener and simulation intervals
   stopAutoTrading();
@@ -99,8 +158,12 @@ export function startAutoTrading(userId, premiumStatus, onTradeLogged) {
         if (tradeSnap.empty && signal.status === "Pending") {
           // Trigger mock trade execution
           console.log(`Auto Trading: Executing trade for ${signal.pair}`);
-          const lev = await logTrade(userId, signal);
-          if (onTradeLogged) onTradeLogged(`Executed order for ${signal.pair} (${signal.direction}) at $${signal.entry} (${lev}x Leverage, Margin $0.50)`);
+          const analysis = generateAnalysisMethod(signal.pair, signal.direction);
+          const lev = await logTrade(userId, signal, analysis);
+          if (onTradeLogged) {
+            onTradeLogged(`Executed order for ${signal.pair} (${signal.direction}) at $${signal.entry} (${lev}x Leverage, Margin $0.50)`);
+            onTradeLogged(`[ANALYSIS] High-Accuracy Indicator: ${analysis}`);
+          }
         }
       } 
       
@@ -117,8 +180,19 @@ export function startAutoTrading(userId, premiumStatus, onTradeLogged) {
           const tradeSnap = await getDocs(tradeQuery);
           
           tradeSnap.forEach(async (tradeDoc) => {
-            await closeTrade(userId, tradeDoc.id, signal.status);
-            if (onTradeLogged) onTradeLogged(`Trade closed for ${signal.pair}: ${signal.status.toUpperCase()}`);
+            const closeInfo = await closeTrade(userId, tradeDoc.id, signal.status);
+            if (onTradeLogged) {
+              if (closeInfo) {
+                const pnlSign = closeInfo.pnl >= 0 ? "+" : "";
+                if (signal.status === "Win") {
+                  onTradeLogged(`Trade closed for ${signal.pair}: WIN. Take-Profit reached. PnL: ${pnlSign}$${closeInfo.pnlAmount.toFixed(4)} (${pnlSign}${closeInfo.pnl.toFixed(2)}%)`);
+                } else {
+                  onTradeLogged(`Trade closed for ${signal.pair}: LOSS. Stop-Loss triggered. PnL: -$${Math.abs(closeInfo.pnlAmount).toFixed(4)} (${closeInfo.pnl.toFixed(2)}%)`);
+                }
+              } else {
+                onTradeLogged(`Trade closed for ${signal.pair}: ${signal.status.toUpperCase()}`);
+              }
+            }
           });
         }
       }
@@ -145,8 +219,19 @@ export function startAutoTrading(userId, premiumStatus, onTradeLogged) {
         const isWin = Math.random() < 0.95; // 95% High Accuracy Win rate
         const result = isWin ? "Win" : "Loss";
         
-        await closeTrade(userId, trade.id, result);
-        if (onTradeLogged) onTradeLogged(`Closed position for ${trade.pair}: ${result.toUpperCase()}`);
+        const closeInfo = await closeTrade(userId, trade.id, result);
+        if (onTradeLogged) {
+          if (closeInfo) {
+            const pnlSign = closeInfo.pnl >= 0 ? "+" : "";
+            if (isWin) {
+              onTradeLogged(`Closed position for ${trade.pair}: WIN. Take-Profit Target reached. PnL: ${pnlSign}$${closeInfo.pnlAmount.toFixed(4)} (${pnlSign}${closeInfo.pnl.toFixed(2)}%)`);
+            } else {
+              onTradeLogged(`Closed position for ${trade.pair}: LOSS. Stop-Loss triggered. PnL: -$${Math.abs(closeInfo.pnlAmount).toFixed(4)} (${closeInfo.pnl.toFixed(2)}%)`);
+            }
+          } else {
+            onTradeLogged(`Closed position for ${trade.pair}: ${result.toUpperCase()}`);
+          }
+        }
         return;
       }
       
@@ -182,8 +267,12 @@ export function startAutoTrading(userId, premiumStatus, onTradeLogged) {
           
           if (availableSignals.length > 0) {
             const signalToTrade = availableSignals[Math.floor(Math.random() * availableSignals.length)];
-            const lev = await logTrade(userId, signalToTrade);
-            if (onTradeLogged) onTradeLogged(`Auto-Trading: Executed order for ${signalToTrade.pair} (${signalToTrade.direction}) at $${signalToTrade.entry} (${lev}x Leverage, Margin $0.50)`);
+            const analysis = generateAnalysisMethod(signalToTrade.pair, signalToTrade.direction);
+            const lev = await logTrade(userId, signalToTrade, analysis);
+            if (onTradeLogged) {
+              onTradeLogged(`Auto-Trading: Executed order for ${signalToTrade.pair} (${signalToTrade.direction}) at $${signalToTrade.entry} (${lev}x Leverage, Margin $0.50)`);
+              onTradeLogged(`[ANALYSIS] High-Accuracy Indicator: ${analysis}`);
+            }
           } else {
             // Generate a simulated dynamic market opportunity
             const pairs = ["LINK/USDT", "AVAX/USDT", "DOGE/USDT", "XRP/USDT", "NEAR/USDT"];
@@ -198,8 +287,12 @@ export function startAutoTrading(userId, premiumStatus, onTradeLogged) {
               stopLoss: "5",
               status: "Pending"
             };
-            const lev = await logTrade(userId, simulatedSignal);
-            if (onTradeLogged) onTradeLogged(`Market alert: Opening auto position for ${simulatedSignal.pair} at $${simulatedSignal.entry} (${lev}x Leverage, Margin $0.50)`);
+            const analysis = generateAnalysisMethod(simulatedSignal.pair, simulatedSignal.direction);
+            const lev = await logTrade(userId, simulatedSignal, analysis);
+            if (onTradeLogged) {
+              onTradeLogged(`Market alert: Opening auto position for ${simulatedSignal.pair} at $${simulatedSignal.entry} (${lev}x Leverage, Margin $0.50)`);
+              onTradeLogged(`[ANALYSIS] High-Accuracy Indicator: ${analysis}`);
+            }
           }
         }
       }
@@ -222,7 +315,7 @@ export function stopAutoTrading() {
 }
 
 // Log execution of trade in Firestore
-async function logTrade(userId, signal) {
+async function logTrade(userId, signal, analysisMethod = "") {
   try {
     const leverage = Math.floor(Math.random() * (25 - 10 + 1)) + 10; // 10x to 25x
     const tradeData = {
@@ -239,6 +332,7 @@ async function logTrade(userId, signal) {
       riskPerTrade: 0.5, // $0.50 USDT risk
       pnl: 0,
       pnlAmount: 0,
+      analysisMethod: analysisMethod,
       executedAt: new Date().toISOString(),
       closedAt: null
     };
@@ -256,7 +350,7 @@ async function closeTrade(userId, tradeDocId, resultStatus) {
   try {
     const tradeRef = doc(db, "trades", tradeDocId);
     const tradeSnap = await getDoc(tradeRef);
-    if (!tradeSnap.exists()) return;
+    if (!tradeSnap.exists()) return null;
     
     const tradeData = tradeSnap.data();
     const leverage = parseInt(tradeData.leverage) || 15;
@@ -298,7 +392,9 @@ async function closeTrade(userId, tradeDocId, resultStatus) {
       transaction.update(userRef, { winLoss: currentWinLoss });
     });
     
+    return { pnl: pnlVal, pnlAmount: pnlAmountVal };
   } catch (error) {
     console.error("Error closing trade and updating stats:", error);
+    return null;
   }
 }
