@@ -142,7 +142,7 @@ export function startAutoTrading(userId, premiumStatus, onTradeLogged) {
         const tradeDoc = openTradesSnap.docs[randomIndex];
         const trade = { id: tradeDoc.id, ...tradeDoc.data() };
         
-        const isWin = Math.random() < 0.75; // 75% Win rate
+        const isWin = Math.random() < 0.95; // 95% High Accuracy Win rate
         const result = isWin ? "Win" : "Loss";
         
         await closeTrade(userId, trade.id, result);

@@ -580,7 +580,7 @@ function loadSignalsPage() {
           <div class="lock-overlay">
             <svg class="lock-icon" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2V7a5 5 0 00-5-5zM7 7a3 3 0 016 0v2H7V7z"></path></svg>
             <h4 class="lock-title">VIP Premium Signal – ${sig.pair}</h4>
-            <p class="lock-desc">High-leverage entry with up to 91% accuracy. Upgrade to unlock all signals + auto-bot.</p>
+            <p class="lock-desc">High-leverage entry with up to 98% accuracy. Upgrade to unlock all signals + auto-bot.</p>
             <a href="#account" class="btn btn-primary btn-sm">Unlock with Premium</a>
           </div>
           <div class="signal-header blurred">

@@ -24,7 +24,7 @@ const FREE_SIGNALS = [
     stopLoss: "0.1175",
     leverage: "2x",
     minTrade: "$5",
-    accuracy: "87%",
+    accuracy: "96%",
     status: "Pending",
     tier: "free",
     createdAt: new Date(Date.now() - 1000 * 60 * 8).toISOString()
@@ -39,7 +39,7 @@ const FREE_SIGNALS = [
     stopLoss: "0.5600",
     leverage: "3x",
     minTrade: "$5",
-    accuracy: "84%",
+    accuracy: "94%",
     status: "Pending",
     tier: "free",
     createdAt: new Date(Date.now() - 1000 * 60 * 25).toISOString()
@@ -54,7 +54,7 @@ const FREE_SIGNALS = [
     stopLoss: "0.4300",
     leverage: "2x",
     minTrade: "$5",
-    accuracy: "82%",
+    accuracy: "93%",
     status: "Win",
     tier: "free",
     createdAt: new Date(Date.now() - 1000 * 60 * 90).toISOString()
@@ -69,7 +69,7 @@ const FREE_SIGNALS = [
     stopLoss: "0.9150",
     leverage: "2x",
     minTrade: "$5",
-    accuracy: "80%",
+    accuracy: "91%",
     status: "Pending",
     tier: "free",
     createdAt: new Date(Date.now() - 1000 * 60 * 45).toISOString()
@@ -84,7 +84,7 @@ const FREE_SIGNALS = [
     stopLoss: "0.1040",
     leverage: "3x",
     minTrade: "$5",
-    accuracy: "85%",
+    accuracy: "95%",
     status: "Win",
     tier: "free",
     createdAt: new Date(Date.now() - 1000 * 60 * 180).toISOString()
@@ -104,7 +104,7 @@ const VIP_SIGNALS = [
     stopLoss: "66000",
     leverage: "10x",
     minTrade: "$50",
-    accuracy: "91%",
+    accuracy: "98%",
     status: "Pending",
     tier: "vip",
     createdAt: new Date(Date.now() - 1000 * 60 * 10).toISOString()
@@ -119,7 +119,7 @@ const VIP_SIGNALS = [
     stopLoss: "3400",
     leverage: "8x",
     minTrade: "$30",
-    accuracy: "89%",
+    accuracy: "97%",
     status: "Win",
     tier: "vip",
     createdAt: new Date(Date.now() - 1000 * 60 * 120).toISOString()
@@ -134,7 +134,7 @@ const VIP_SIGNALS = [
     stopLoss: "152.00",
     leverage: "5x",
     minTrade: "$20",
-    accuracy: "88%",
+    accuracy: "96%",
     status: "Pending",
     tier: "vip",
     createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString()
@@ -149,7 +149,7 @@ const VIP_SIGNALS = [
     stopLoss: "572.00",
     leverage: "7x",
     minTrade: "$30",
-    accuracy: "86%",
+    accuracy: "95%",
     status: "Pending",
     tier: "vip",
     createdAt: new Date(Date.now() - 1000 * 60 * 240).toISOString()
@@ -202,7 +202,7 @@ export function subscribeToSignals(premiumStatus, callback) {
         stopLoss: "•••",
         leverage: "VIP",
         minTrade: "VIP",
-        accuracy: "90%+",
+        accuracy: "95%+",
         createdAt: sig.createdAt
       }));
 
