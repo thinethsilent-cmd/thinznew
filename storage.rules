@@ -1,0 +1,12 @@
+rules_version = '2';
+
+// Firebase Storage rules for THINz Banda application.
+// Deploy these to your Firebase Storage console.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /payment_slips/{userId}/{allPaths=**} {
+      // Allow read/write only if the authenticated user matches the userId folder
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>THINz Banda | Binance Signals & AI Auto-Trading Bot</title>
+  <meta name="description" content="ApexSignal – Home page for Binance signals and AI auto‑trading.">
+  <link rel="stylesheet" href="css/style.css" />
+  <script>
+    // Prevent right-click view source / inspect element
+    document.addEventListener("contextmenu", (e) => e.preventDefault());
+    // Prevent DevTools shortcuts and View Source
+    document.addEventListener("keydown", (e) => {
+      if (
+        e.key === "F12" ||
+        (e.ctrlKey && e.key.toLowerCase() === "u") ||
+        (e.ctrlKey && e.shiftKey && ["i", "c", "j"].includes(e.key.toLowerCase())) ||
+        (e.ctrlKey && e.key.toLowerCase() === "s")
+      ) {
+        e.preventDefault();
+        return false;
+      }
+    });
+  </script>
+</head>
+<body>
+  <!-- Header (same as original) -->
+  <header class="header">
+    <div class="container nav-wrapper">
+      <a href="home.html" class="logo" style="display:flex;align-items:center;gap:0;text-decoration:none;">
+        <span style="font-size:1.35rem;font-weight:900;letter-spacing:-0.03em;color:#fff;font-family:'Inter',sans-serif;text-transform:uppercase;">THIN<span style="color:var(--color-primary);">z</span></span>
+        <span style="font-size:1.35rem;font-weight:900;letter-spacing:-0.03em;color:var(--color-primary);font-family:'Inter',sans-serif;margin-left:5px;">Banda</span>
+      </a>
+      <nav>
+        <ul class="nav-links">
+          <li><a href="home.html" class="active">Home</a></li>
+          <li class="auth-link hidden"><a href="signals.html">Signals</a></li>
+          <li class="auth-link hidden"><a href="bot.html">Auto-Trading Bot</a></li>
+          <li class="auth-link hidden"><a href="account.html">Account</a></li>
+          <li class="auth-link hidden" id="nav-admin-link"><a href="admin.html" class="text-yellow">Admin Panel</a></li>
+        </ul>
+      </nav>
+      <div class="nav-actions">
+        <!-- YouTube Channel -->
+        <a href="https://www.youtube.com/@THINzBanda" target="_blank" rel="noopener" class="nav-yt-link" title="Watch THINz Banda on YouTube">
+          <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.11C19.517 3.545 12 3.545 12 3.545s-7.516 0-9.387.507a3.003 3.003 0 0 0-2.11 2.11C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 0 0 2.11 2.11c1.871.507 9.388.507 9.388.507s7.518 0 9.388-.507a3.003 3.003 0 0 0 2.11-2.11C24 15.967 24 12 24 12s0-3.967-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+        </a>
+
+        <a href="auth.html" class="btn btn-secondary btn-sm guest-link" id="nav-login-btn">Sign In</a>
+        <a href="auth.html" class="btn btn-primary btn-sm guest-link" id="nav-signup-btn">Start Free</a>
+        <div id="nav-profile" class="profile-nav-box hidden">
+          <span id="nav-premium-badge" class="plan-badge badge-free">Free Tier</span>
+          <span id="nav-profile-name" class="text-white font-medium">Username</span>
+          <a href="#" class="btn btn-secondary btn-xs text-red" id="btn-logout">Logout</a>
+        </div>
+      </div>
+    </div>
+  </header>
+  <!-- Home Section (copied from index.html) -->
+  <section id="page-home">
+    <div class="container hero-wrapper">
+      <div>
+        <h1 class="hero-title">Automate Your Binance Trades With <span>Real-Time Signals</span></h1>
+        <p class="hero-subtitle">Get top‑tier AI trading signals and deploy our high accuracy bot via official Binance API keys. Maximize efficiency, secure gains, and trade smart.</p>
+        <div class="hero-cta">
+          <a href="auth.html" class="btn btn-primary guest-link">Create Free Account</a>
+          <a href="account.html" class="btn btn-secondary">Upgrade to Premium</a>
+        </div>
+      </div>
+      <!-- Hero illustration omitted for brevity -->
+    </div>
+    <!-- Features grid omitted for brevity -->
+  </section>
+  <script type="module" src="js/home.js"></script>
+</body>
+</html>

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>THINz Banda | Sign In / Sign Up</title>
+  <meta name="description" content="Sign in or create a free account to access Binance signals and AI auto‑trading.">
+  <link rel="stylesheet" href="css/style.css" />
+  <script>
+    // Prevent right-click view source / inspect element
+    document.addEventListener("contextmenu", (e) => e.preventDefault());
+    // Prevent DevTools shortcuts and View Source
+    document.addEventListener("keydown", (e) => {
+      if (
+        e.key === "F12" ||
+        (e.ctrlKey && e.key.toLowerCase() === "u") ||
+        (e.ctrlKey && e.shiftKey && ["i", "c", "j"].includes(e.key.toLowerCase())) ||
+        (e.ctrlKey && e.key.toLowerCase() === "s")
+      ) {
+        e.preventDefault();
+        return false;
+      }
+    });
+  </script>
+</head>
+<body>
+  <!-- Header (same as home) -->
+  <header class="header">
+    <div class="container nav-wrapper">
+      <a href="home.html" class="logo" style="display:flex;align-items:center;gap:0;text-decoration:none;">
+        <span style="font-size:1.35rem;font-weight:900;letter-spacing:-0.03em;color:#fff;font-family:'Inter',sans-serif;text-transform:uppercase;">THIN<span style="color:var(--color-primary);">z</span></span>
+        <span style="font-size:1.35rem;font-weight:900;letter-spacing:-0.03em;color:var(--color-primary);font-family:'Inter',sans-serif;margin-left:5px;">Banda</span>
+      </a>
+      <nav>
+        <ul class="nav-links">
+          <li><a href="home.html" class="active">Home</a></li>
+          <li class="auth-link hidden"><a href="signals.html">Signals</a></li>
+          <li class="auth-link hidden"><a href="bot.html">Auto-Trading Bot</a></li>
+          <li class="auth-link hidden"><a href="account.html">Account</a></li>
+          <li class="auth-link hidden" id="nav-admin-link"><a href="admin.html" class="text-yellow">Admin Panel</a></li>
+        </ul>
+      </nav>
+      <div class="nav-actions">
+        <!-- YouTube Channel -->
+        <a href="https://www.youtube.com/@THINzBanda" target="_blank" rel="noopener" class="nav-yt-link" title="Watch THINz Banda on YouTube">
+          <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.11C19.517 3.545 12 3.545 12 3.545s-7.516 0-9.387.507a3.003 3.003 0 0 0-2.11 2.11C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 0 0 2.11 2.11c1.871.507 9.388.507 9.388.507s7.518 0 9.388-.507a3.003 3.003 0 0 0 2.11-2.11C24 15.967 24 12 24 12s0-3.967-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+        </a>
+
+        <a href="auth.html" class="btn btn-secondary btn-sm guest-link" id="nav-login-btn">Sign In</a>
+        <a href="auth.html" class="btn btn-primary btn-sm guest-link" id="nav-signup-btn">Start Free</a>
+        <div id="nav-profile" class="profile-nav-box hidden">
+          <span id="nav-premium-badge" class="plan-badge badge-free">Free Tier</span>
+          <span id="nav-profile-name" class="text-white font-medium">Username</span>
+          <a href="#" class="btn btn-secondary btn-xs text-red" id="btn-logout">Logout</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- AUTH SECTION -->
+  <section id="page-auth">
+    <div class="container auth-wrapper">
+      <div class="auth-container">
+        <!-- Auth Info Side -->
+        <div class="auth-info">
+          <h2>Secure Your Trading Competitive Edge</h2>
+          <p>Create an account to gain access to market signals and setup automated trading setups.</p>
+          <div class="auth-benefit">
+            <div class="auth-benefit-icon"><svg width="18" height="18" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg></div>
+            <span>Daily curated signals & real-time updates</span>
+          </div>
+          <div class="auth-benefit">
+            <div class="auth-benefit-icon"><svg width="18" height="18" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg></div>
+            <span>Secure API key connection (No withdrawal access required)</span>
+          </div>
+        </div>
+        <!-- Forms Side -->
+        <div class="auth-tabs-panel">
+          <div class="auth-tab-buttons">
+            <button class="auth-tab-btn active" id="tab-login" onclick="toggleAuthTab('login')">Sign In</button>
+            <button class="auth-tab-btn" id="tab-signup" onclick="toggleAuthTab('signup')">Sign Up</button>
+          </div>
+          <!-- Sign In Form -->
+          <form id="login-form">
+            <div class="form-group">
+              <label for="login-email">Email Address</label>
+              <input type="email" id="login-email" class="form-control" placeholder="enter email" required />
+            </div>
+            <div class="form-group">
+              <label for="login-password">Password</label>
+              <input type="password" id="login-password" class="form-control" placeholder="••••••••" required />
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">Sign In</button>
+            <div style="display: flex; align-items: center; text-align: center; margin: 15px 0; color: var(--text-muted); font-size: 0.8rem; font-weight: 600;">
+              <hr style="flex: 1; border: none; border-top: 1px solid var(--border-color); margin-right: 10px;" />OR<hr style="flex: 1; border: none; border-top: 1px solid var(--border-color); margin-left: 10px;" />
+            </div>
+            <button type="button" class="btn btn-secondary btn-google-login" style="width: 100%;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 8px;"><path d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.136 4.114A5.8 5.8 0 018.1 12.7a5.8 5.8 0 015.89-5.815c1.558 0 2.973.57 4.07 1.5l3.1-3.1C19.29 3.58 16.8 2.3 14 2.3 8.35 2.3 3.75 6.9 3.75 12.55s4.6 10.25 10.25 10.25c5.73 0 10.15-4 10.15-10.25c0-.69-.08-1.35-.22-1.97H12.24z"/></svg>
+              Continue with Google
+            </button>
+            <div id="login-error" class="error-message text-red text-center"></div>
+          </form>
+          <!-- Sign Up Form (Hidden by default) -->
+          <form id="signup-form" class="hidden">
+            <div class="form-group">
+              <label for="signup-name">Display Name</label>
+              <input type="text" id="signup-name" class="form-control" placeholder="John Doe" required />
+            </div>
+            <div class="form-group">
+              <label for="signup-email">Email Address</label>
+              <input type="email" id="signup-email" class="form-control" placeholder="name@domain.com" required />
+            </div>
+            <div class="form-group">
+              <label for="signup-password">Password</label>
+              <input type="password" id="signup-password" class="form-control" placeholder="Min. 6 characters" required />
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">Create Account</button>
+            <div style="display: flex; align-items: center; text-align: center; margin: 15px 0; color: var(--text-muted); font-size: 0.8rem; font-weight: 600;">
+              <hr style="flex: 1; border: none; border-top: 1px solid var(--border-color); margin-right: 10px;" />OR<hr style="flex: 1; border: none; border-top: 1px solid var(--border-color); margin-left: 10px;" />
+            </div>
+            <button type="button" class="btn btn-secondary btn-google-login" style="width: 100%;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 8px;"><path d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.136 4.114A5.8 5.8 0 018.1 12.7a5.8 5.8 0 015.89-5.815c1.558 0 2.973.57 4.07 1.5l3.1-3.1C19.29 3.58 16.8 2.3 14 2.3 8.35 2.3 3.75 6.9 3.75 12.55s4.6 10.25 10.25 10.25c5.73 0 10.15-4 10.15-10.25c0-.69-.08-1.35-.22-1.97H12.24z"/></svg>
+              Continue with Google
+            </button>
+            <div id="signup-error" class="error-message text-red text-center"></div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script type="module" src="js/auth.js"></script>
+</body>
+</html>

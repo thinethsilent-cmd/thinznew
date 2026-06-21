@@ -1,0 +1,26 @@
+# Firebase local emulator cache
+.firebase/
+
+# Dependency directories
+node_modules/
+
+# Operating system files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor directories and files
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Local dev server logs
+*.log
+
+# Temp files
+*.tmp
+*.temp
