@@ -666,6 +666,29 @@ function addBotLog(msg) {
 export function initApp() {
   initAuthListeners();
   initFormListeners();
+  initMobileMenu();
+}
+
+// Mobile Navigation Menu Toggle
+export function initMobileMenu() {
+  const menuToggle = document.getElementById("mobile-menu-toggle");
+  const navMenuContainer = document.getElementById("nav-menu-container");
+
+  if (menuToggle && navMenuContainer) {
+    menuToggle.addEventListener("click", () => {
+      menuToggle.classList.toggle("active");
+      navMenuContainer.classList.toggle("active");
+    });
+
+    // Close menu when clicking navigation links or buttons
+    const links = navMenuContainer.querySelectorAll("a, button");
+    links.forEach(link => {
+      link.addEventListener("click", () => {
+        menuToggle.classList.remove("active");
+        navMenuContainer.classList.remove("active");
+      });
+    });
+  }
 }
 
 // End of common.js

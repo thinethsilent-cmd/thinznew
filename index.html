@@ -39,31 +39,40 @@
         <span style="font-size:1.35rem;font-weight:900;letter-spacing:-0.03em;color:var(--color-primary);font-family:'Inter',sans-serif;margin-left:5px;">Banda</span>
       </a>
 
-      <nav>
-        <ul class="nav-links">
-          <li><a href="#home" data-target="home" class="active">Home</a></li>
-          <li class="auth-link hidden"><a href="#signals" data-target="signals">Signals</a></li>
-          <li class="auth-link hidden"><a href="#bot" data-target="bot">Auto-Trading Bot</a></li>
-          <li class="auth-link hidden"><a href="#account" data-target="account">Account</a></li>
-          <li class="auth-link hidden" id="nav-admin-link"><a href="#admin" data-target="admin" class="text-yellow">Admin Panel</a></li>
-        </ul>
-      </nav>
+      <!-- Hamburger Toggle Button -->
+      <button class="menu-toggle" id="mobile-menu-toggle" aria-label="Toggle Menu">
+        <span class="hamburger-bar"></span>
+        <span class="hamburger-bar"></span>
+        <span class="hamburger-bar"></span>
+      </button>
 
-      <div class="nav-actions">
-        <!-- YouTube Channel -->
-        <a href="https://www.youtube.com/@THINzBanda" target="_blank" rel="noopener" class="nav-yt-link" title="Watch THINz Banda on YouTube">
-          <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.11C19.517 3.545 12 3.545 12 3.545s-7.516 0-9.387.507a3.003 3.003 0 0 0-2.11 2.11C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 0 0 2.11 2.11c1.871.507 9.388.507 9.388.507s7.518 0 9.388-.507a3.003 3.003 0 0 0 2.11-2.11C24 15.967 24 12 24 12s0-3.967-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-        </a>
+      <div class="nav-menu-container" id="nav-menu-container">
+        <nav>
+          <ul class="nav-links">
+            <li><a href="#home" data-target="home" class="active">Home</a></li>
+            <li class="auth-link hidden"><a href="#signals" data-target="signals">Signals</a></li>
+            <li class="auth-link hidden"><a href="#bot" data-target="bot">Auto-Trading Bot</a></li>
+            <li class="auth-link hidden"><a href="#account" data-target="account">Account</a></li>
+            <li class="auth-link hidden" id="nav-admin-link"><a href="#admin" data-target="admin" class="text-yellow">Admin Panel</a></li>
+          </ul>
+        </nav>
 
-        <!-- Guest Controls -->
-        <a href="#auth" class="btn btn-secondary btn-sm guest-link" id="nav-login-btn">Sign In</a>
-        <a href="#auth" class="btn btn-primary btn-sm guest-link" id="nav-signup-btn">Start Free</a>
+        <div class="nav-actions">
+          <!-- YouTube Channel -->
+          <a href="https://www.youtube.com/@THINzBanda" target="_blank" rel="noopener" class="nav-yt-link" title="Watch THINz Banda on YouTube">
+            <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.11C19.517 3.545 12 3.545 12 3.545s-7.516 0-9.387.507a3.003 3.003 0 0 0-2.11 2.11C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 0 0 2.11 2.11c1.871.507 9.388.507 9.388.507s7.518 0 9.388-.507a3.003 3.003 0 0 0 2.11-2.11C24 15.967 24 12 24 12s0-3.967-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+          </a>
 
-        <!-- Authenticated Profile Controls -->
-        <div id="nav-profile" class="profile-nav-box hidden">
-          <span id="nav-premium-badge" class="plan-badge badge-free">Free Tier</span>
-          <span id="nav-profile-name" class="text-white font-medium">Username</span>
-          <a href="#" class="btn btn-secondary btn-xs text-red" id="btn-logout">Logout</a>
+          <!-- Guest Controls -->
+          <a href="#auth" class="btn btn-secondary btn-sm guest-link" id="nav-login-btn">Sign In</a>
+          <a href="#auth" class="btn btn-primary btn-sm guest-link" id="nav-signup-btn">Start Free</a>
+
+          <!-- Authenticated Profile Controls -->
+          <div id="nav-profile" class="profile-nav-box hidden">
+            <span id="nav-premium-badge" class="plan-badge badge-free">Free Tier</span>
+            <span id="nav-profile-name" class="text-white font-medium">Username</span>
+            <a href="#" class="btn btn-secondary btn-xs text-red" id="btn-logout">Logout</a>
+          </div>
         </div>
       </div>
     </div>
@@ -347,6 +356,13 @@
     <div class="container">
       <!-- 1. Normal Upgrade view -->
       <div id="account-normal-panel" class="pricing-wrapper text-center">
+
+        <!-- Expired notice banner (hidden by default) -->
+        <div id="expired-notice-banner" class="hidden" style="background: rgba(255,51,102,0.08); border: 1px solid rgba(255,51,102,0.35); border-radius: 12px; padding: 16px 22px; margin-bottom: 28px; text-align: center;">
+          <div style="font-size:1.2rem; font-weight:800; color:#ff3366; margin-bottom:6px;">⚠️ Your VIP Membership Has Expired</div>
+          <p style="color:var(--text-secondary); font-size:0.9rem; margin:0;">Your access has been downgraded. Renew your plan below to restore VIP Premium signals and Auto-Trading Bot access.</p>
+        </div>
+
         <h2 style="font-size: 2.2rem; font-weight: 800; margin-bottom: 10px;">Upgrade to VIP Premium</h2>
         <p class="text-gray" style="margin-bottom: 40px;">Gain full access to all signals and activate our AI auto-trading bot. Choose your plan below.</p>
 
@@ -485,12 +501,16 @@
       </div>
 
       <!-- 3. VIP Premium Activated screen -->
-      <div id="account-vip-panel" class="text-center hidden" style="max-width: 500px; margin: 50px auto;">
+      <div id="account-vip-panel" class="text-center hidden" style="max-width: 520px; margin: 50px auto;">
         <div style="width: 70px; height: 70px; border-radius: 50%; background: rgba(0, 255, 136, 0.1); border: 2px solid var(--color-buy); display: flex; justify-content: center; align-items: center; margin: 0 auto 20px auto; box-shadow: var(--glow-green);">
           <svg fill="currentColor" width="40" height="40" viewBox="0 0 20 20" class="text-green"><path fill-rule="evenodd" d="M6.267 3.455a.75.75 0 00-.708.523L4.547 7H1.75a.75.75 0 00-.75.75v.068c0 .244.11.474.305.629l2.25 1.8a.75.75 0 00.266.839l-.825 3.3a.75.75 0 001.19.865L7 12.872l2.814 2.391a.75.75 0 001.19-.865l-.825-3.3a.75.75 0 00.266-.839l2.25-1.8a.75.75 0 00.305-.629V7.75a.75.75 0 00-.75-.75h-2.797l-1.012-3.022a.75.75 0 00-.708-.523z" clip-rule="evenodd"></path></svg>
         </div>
         <h2 style="font-size: 2.2rem; font-weight: 800; margin-bottom: 10px;">VIP Premium Active</h2>
-        <p class="text-gray" style="line-height: 1.6; margin-bottom: 25px;">You have full VIP Premium access! Explore detailed daily signals and set up your automated execution bot.</p>
+        <p class="text-gray" style="line-height: 1.6; margin-bottom: 20px;">You have full VIP Premium access! Explore detailed daily signals and set up your automated execution bot.</p>
+
+        <!-- Expiry info injected dynamically by app.js -->
+        <div id="vip-expiry-info" style="margin-bottom: 24px;"></div>
+
         <div style="display: flex; gap: 15px; justify-content: center;">
           <a href="#signals" class="btn btn-primary">View VIP Signals</a>
           <a href="#bot" class="btn btn-secondary">Open Trading Bot</a>
@@ -594,25 +614,26 @@
           </div>
         </div>
 
-        <!-- 4. Registered Users list (Win/Loss Tracking) -->
-        <div class="admin-card" style="grid-column: span 2; min-height: auto;">
-          <h3>Users Performance Directory</h3>
-          <div class="table-wrapper">
-            <table class="trade-table">
-              <thead>
-                <tr>
-                  <th class="py-3 px-4">Display Name</th>
-                  <th class="py-3 px-4">Email</th>
-                  <th class="py-3 px-4">Membership</th>
-                  <th class="py-3 px-4">Bot Win/Loss (Winrate)</th>
-                </tr>
-              </thead>
-              <tbody id="admin-users-list">
-                <!-- Inserted Dynamically -->
-              </tbody>
-            </table>
+          <!-- 4. Registered Users list (Win/Loss Tracking + Plan/Expiry) -->
+          <div class="admin-card" style="grid-column: span 2; min-height: auto;">
+            <h3>Users Performance Directory</h3>
+            <div class="table-wrapper">
+              <table class="trade-table">
+                <thead>
+                  <tr>
+                    <th class="py-3 px-4">Display Name</th>
+                    <th class="py-3 px-4">Email</th>
+                    <th class="py-3 px-4">Membership</th>
+                    <th class="py-3 px-4">Plan &amp; Expiry</th>
+                    <th class="py-3 px-4">Bot Win/Loss (Winrate)</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-users-list">
+                  <!-- Inserted Dynamically -->
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
       </div>
     </div>
   </section>
@@ -664,7 +685,8 @@
       const label = document.getElementById('selected-plan-label');
       const hiddenPlan = document.getElementById('payment-plan');
       if (label) label.textContent = plan + ' — Rs. ' + price + '/=';
-      if (hiddenPlan) hiddenPlan.value = plan + ' (Rs. ' + price + '/=)';
+      // Store just the plan name (e.g. "7 Days", "1 Month") for Firestore
+      if (hiddenPlan) hiddenPlan.value = plan;
     }
   </script>
 

@@ -1174,7 +1174,146 @@ input:checked + .slider:before {
   color: #fff;
 }
 
+/* Table Typography Wrap Control */
+.trade-table th,
+.trade-table td {
+  white-space: nowrap;
+}
+
+/* Menu Toggle Hamburger Icon */
+.menu-toggle {
+  display: none;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 26px;
+  height: 18px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  z-index: 1001;
+}
+
+.hamburger-bar {
+  width: 100%;
+  height: 2.5px;
+  background-color: var(--text-primary);
+  border-radius: 2px;
+  transition: var(--transition-normal);
+}
+
+/* Hamburger Animation when active */
+.menu-toggle.active .hamburger-bar:nth-child(1) {
+  transform: translateY(8px) rotate(45deg);
+  background-color: var(--color-primary);
+}
+
+.menu-toggle.active .hamburger-bar:nth-child(2) {
+  opacity: 0;
+}
+
+.menu-toggle.active .hamburger-bar:nth-child(3) {
+  transform: translateY(-8px) rotate(-45deg);
+  background-color: var(--color-primary);
+}
+
+/* Navigation Menu Container (Desktop) */
+.nav-menu-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 1;
+  margin-left: 40px;
+}
+
 /* Responsive Styles */
+@media (max-width: 900px) {
+  .menu-toggle {
+    display: flex;
+  }
+
+  .nav-menu-container {
+    position: fixed;
+    top: 70px;
+    right: -100%;
+    width: 100%;
+    max-width: 320px;
+    height: calc(100vh - 70px);
+    background: rgba(10, 13, 22, 0.97);
+    backdrop-filter: blur(20px);
+    border-left: 1px solid var(--border-color);
+    padding: 40px 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch;
+    gap: 30px;
+    transition: right var(--transition-normal);
+    z-index: 1000;
+    overflow-y: auto;
+    margin-left: 0;
+    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+  }
+
+  .nav-menu-container.active {
+    right: 0;
+  }
+
+  .nav-links {
+    flex-direction: column;
+    gap: 20px;
+    width: 100%;
+  }
+
+  .nav-links li {
+    width: 100%;
+  }
+
+  .nav-links a {
+    display: block;
+    font-size: 1.1rem;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  }
+
+  .nav-links a::after {
+    display: none;
+  }
+
+  .nav-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+    width: 100%;
+    border-top: 1px solid var(--border-color);
+    padding-top: 24px;
+  }
+
+  .nav-actions .btn {
+    width: 100%;
+    padding: 12px;
+    font-size: 1.05rem;
+  }
+
+  .profile-nav-box {
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.02);
+    width: 100%;
+    border: 1px solid var(--border-color);
+  }
+
+  .profile-nav-box #btn-logout {
+    width: 100%;
+    text-align: center;
+    margin-top: 8px;
+    padding: 8px;
+  }
+}
+
 @media (max-width: 992px) {
   .hero-wrapper {
     grid-template-columns: 1fr;
@@ -1206,14 +1345,36 @@ input:checked + .slider:before {
 }
 
 @media (max-width: 576px) {
-  .hero-title {
-    font-size: 2.5rem;
+  section {
+    padding: 40px 0;
   }
-  .nav-links {
-    display: none; /* In a real app we'd build a drawer, but simple navigation links in buttons is fine for SPA */
+  .hero-title {
+    font-size: 2.3rem;
+  }
+  .hero-subtitle {
+    font-size: 1rem;
   }
   .bot-metrics {
     grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  .dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .auth-info, .auth-tabs-panel {
+    padding: 24px 16px;
+  }
+  .auth-container {
+    border-radius: 16px;
+  }
+  .pricing-card {
+    padding: 24px;
+  }
+  #plan-grid {
+    grid-template-columns: 1fr !important;
   }
 }
 
@@ -1230,3 +1391,4 @@ input:checked + .slider:before {
   opacity: 0.9;
   filter: drop-shadow(0 0 6px rgba(255, 0, 0, 0.7));
 }
+

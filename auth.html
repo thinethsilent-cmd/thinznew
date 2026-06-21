@@ -31,27 +31,36 @@
         <span style="font-size:1.35rem;font-weight:900;letter-spacing:-0.03em;color:#fff;font-family:'Inter',sans-serif;text-transform:uppercase;">THIN<span style="color:var(--color-primary);">z</span></span>
         <span style="font-size:1.35rem;font-weight:900;letter-spacing:-0.03em;color:var(--color-primary);font-family:'Inter',sans-serif;margin-left:5px;">Banda</span>
       </a>
-      <nav>
-        <ul class="nav-links">
-          <li><a href="home.html" class="active">Home</a></li>
-          <li class="auth-link hidden"><a href="signals.html">Signals</a></li>
-          <li class="auth-link hidden"><a href="bot.html">Auto-Trading Bot</a></li>
-          <li class="auth-link hidden"><a href="account.html">Account</a></li>
-          <li class="auth-link hidden" id="nav-admin-link"><a href="admin.html" class="text-yellow">Admin Panel</a></li>
-        </ul>
-      </nav>
-      <div class="nav-actions">
-        <!-- YouTube Channel -->
-        <a href="https://www.youtube.com/@THINzBanda" target="_blank" rel="noopener" class="nav-yt-link" title="Watch THINz Banda on YouTube">
-          <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.11C19.517 3.545 12 3.545 12 3.545s-7.516 0-9.387.507a3.003 3.003 0 0 0-2.11 2.11C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 0 0 2.11 2.11c1.871.507 9.388.507 9.388.507s7.518 0 9.388-.507a3.003 3.003 0 0 0 2.11-2.11C24 15.967 24 12 24 12s0-3.967-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-        </a>
+      <!-- Hamburger Toggle Button -->
+      <button class="menu-toggle" id="mobile-menu-toggle" aria-label="Toggle Menu">
+        <span class="hamburger-bar"></span>
+        <span class="hamburger-bar"></span>
+        <span class="hamburger-bar"></span>
+      </button>
 
-        <a href="auth.html" class="btn btn-secondary btn-sm guest-link" id="nav-login-btn">Sign In</a>
-        <a href="auth.html" class="btn btn-primary btn-sm guest-link" id="nav-signup-btn">Start Free</a>
-        <div id="nav-profile" class="profile-nav-box hidden">
-          <span id="nav-premium-badge" class="plan-badge badge-free">Free Tier</span>
-          <span id="nav-profile-name" class="text-white font-medium">Username</span>
-          <a href="#" class="btn btn-secondary btn-xs text-red" id="btn-logout">Logout</a>
+      <div class="nav-menu-container" id="nav-menu-container">
+        <nav>
+          <ul class="nav-links">
+            <li><a href="home.html" class="active">Home</a></li>
+            <li class="auth-link hidden"><a href="signals.html">Signals</a></li>
+            <li class="auth-link hidden"><a href="bot.html">Auto-Trading Bot</a></li>
+            <li class="auth-link hidden"><a href="account.html">Account</a></li>
+            <li class="auth-link hidden" id="nav-admin-link"><a href="admin.html" class="text-yellow">Admin Panel</a></li>
+          </ul>
+        </nav>
+        <div class="nav-actions">
+          <!-- YouTube Channel -->
+          <a href="https://www.youtube.com/@THINzBanda" target="_blank" rel="noopener" class="nav-yt-link" title="Watch THINz Banda on YouTube">
+            <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.11C19.517 3.545 12 3.545 12 3.545s-7.516 0-9.387.507a3.003 3.003 0 0 0-2.11 2.11C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 0 0 2.11 2.11c1.871.507 9.388.507 9.388.507s7.518 0 9.388-.507a3.003 3.003 0 0 0 2.11-2.11C24 15.967 24 12 24 12s0-3.967-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+          </a>
+
+          <a href="auth.html" class="btn btn-secondary btn-sm guest-link" id="nav-login-btn">Sign In</a>
+          <a href="auth.html" class="btn btn-primary btn-sm guest-link" id="nav-signup-btn">Start Free</a>
+          <div id="nav-profile" class="profile-nav-box hidden">
+            <span id="nav-premium-badge" class="plan-badge badge-free">Free Tier</span>
+            <span id="nav-profile-name" class="text-white font-medium">Username</span>
+            <a href="#" class="btn btn-secondary btn-xs text-red" id="btn-logout">Logout</a>
+          </div>
         </div>
       </div>
     </div>

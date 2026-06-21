@@ -21,7 +21,8 @@ import {
 import { 
   subscribeToAllUsers, 
   approvePremium, 
-  rejectPremium 
+  rejectPremium,
+  checkAndExpireMembership
 } from "./admin.js";
 import { db, storage } from "./firebase-config.js";
 import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-storage.js";
@@ -64,7 +65,30 @@ document.addEventListener("DOMContentLoaded", () => {
   initRouter();
   initAuthListeners();
   initFormListeners();
+  initMobileMenu();
 });
+
+// Mobile Navigation Menu Toggle
+function initMobileMenu() {
+  const menuToggle = document.getElementById("mobile-menu-toggle");
+  const navMenuContainer = document.getElementById("nav-menu-container");
+
+  if (menuToggle && navMenuContainer) {
+    menuToggle.addEventListener("click", () => {
+      menuToggle.classList.toggle("active");
+      navMenuContainer.classList.toggle("active");
+    });
+
+    // Close menu when clicking navigation links or buttons
+    const links = navMenuContainer.querySelectorAll("a, button");
+    links.forEach(link => {
+      link.addEventListener("click", () => {
+        menuToggle.classList.remove("active");
+        navMenuContainer.classList.remove("active");
+      });
+    });
+  }
+}
 
 // Router
 function initRouter() {
@@ -150,11 +174,21 @@ function cleanupSubscriptions(exceptPage) {
 
 // Authentication Listeners
 function initAuthListeners() {
-  observeAuthState((user, profile) => {
+  observeAuthState(async (user, profile) => {
     state.user = user;
     state.profile = profile;
 
     if (user) {
+      // Auto-expire check: downgrade if membership has passed expiry date
+      if (profile?.premiumStatus === "paid" && profile?.premiumExpiresAt) {
+        const wasExpired = await checkAndExpireMembership(user.uid, profile);
+        if (wasExpired) {
+          // Update local profile state to reflect expiry
+          state.profile = { ...profile, premiumStatus: "expired", activePlan: null, premiumExpiresAt: null };
+          profile = state.profile;
+        }
+      }
+
       // User is logged in
       authLinks.forEach(el => el.classList.remove("hidden"));
       guestLinks.forEach(el => el.classList.add("hidden"));
@@ -170,7 +204,7 @@ function initAuthListeners() {
       }
 
       // Render Badge
-      updatePlanBadge(profile?.premiumStatus);
+      updatePlanBadge(profile?.premiumStatus, profile?.premiumExpiresAt);
 
       // Start Bot auto-trading background check if premium and toggle is enabled in state/storage
       if (profile?.premiumStatus === "paid" || profile?.role === "admin") {
@@ -192,14 +226,22 @@ function initAuthListeners() {
   });
 }
 
-function updatePlanBadge(status) {
+function updatePlanBadge(status, expiresAt) {
   premiumBadge.className = "plan-badge";
   if (status === "paid") {
-    premiumBadge.textContent = "VIP Premium";
+    let label = "VIP Premium";
+    if (expiresAt) {
+      const d = new Date(expiresAt);
+      label = `VIP · Expires ${d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}`;
+    }
+    premiumBadge.textContent = label;
     premiumBadge.classList.add("badge-vip");
   } else if (status === "pending") {
     premiumBadge.textContent = "Pending VIP";
     premiumBadge.classList.add("badge-pending");
+  } else if (status === "expired") {
+    premiumBadge.textContent = "Expired";
+    premiumBadge.classList.add("badge-expired");
   } else {
     premiumBadge.textContent = "Free Tier";
     premiumBadge.classList.add("badge-free");
@@ -483,9 +525,11 @@ function initFormListeners() {
         msgEl.className = "status-message text-yellow";
         msgEl.textContent = "Saving verification request...";
         const userRef = doc(db, "users", state.user.uid);
+        const selectedPlan = document.getElementById("payment-plan")?.value || "";
         await updateDoc(userRef, {
           premiumStatus: "pending",
           paymentTxid: txid.trim(),
+          paymentPlan: selectedPlan, // e.g. "7 Days", "1 Month", "Lifetime"
           paymentRequestedAt: new Date().toISOString(),
           ...(slipUrl && { paymentSlipUrl: slipUrl })
         });
@@ -772,19 +816,52 @@ function loadAccountPage() {
 
   const status = state.profile?.premiumStatus;
   const role = state.profile?.role;
+  const expiresAt = state.profile?.premiumExpiresAt;
+  const activePlan = state.profile?.activePlan;
 
   if (role === "admin" || status === "paid") {
     vipActivePanel.classList.remove("hidden");
     normalPanel.classList.add("hidden");
     pendingPanel.classList.add("hidden");
+
+    // Inject plan + expiry info into VIP panel
+    const expiryInfoEl = document.getElementById("vip-expiry-info");
+    if (expiryInfoEl) {
+      if (role === "admin") {
+        expiryInfoEl.innerHTML = `<span class="text-yellow font-bold">🛡️ Admin Account — Lifetime Access</span>`;
+      } else if (!expiresAt) {
+        expiryInfoEl.innerHTML = `<span class="text-green font-bold">♾️ ${activePlan || "Lifetime"} — Lifetime Access (Never Expires)</span>`;
+      } else {
+        const expiry = new Date(expiresAt);
+        const now = new Date();
+        const daysLeft = Math.max(0, Math.ceil((expiry - now) / (1000 * 60 * 60 * 24)));
+        const expiryStr = expiry.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+        const color = daysLeft <= 3 ? "text-red" : daysLeft <= 7 ? "text-yellow" : "text-green";
+        expiryInfoEl.innerHTML = `
+          <div style="background: rgba(255,255,255,0.04); border: 1px solid var(--border-color); border-radius:10px; padding:14px 18px; text-align:center;">
+            <div style="font-size:0.8rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:.08em; margin-bottom:6px;">Active Plan</div>
+            <div style="font-size:1.2rem; font-weight:800; color:var(--color-primary);">${activePlan || "VIP Premium"}</div>
+            <div style="margin-top:8px; font-size:0.85rem;">Expires: <strong class="${color}">${expiryStr}</strong></div>
+            <div class="${color}" style="font-size:0.8rem; margin-top:4px; font-weight:700;">${daysLeft === 0 ? "⚠️ Expires today" : `${daysLeft} day${daysLeft === 1 ? "" : "s"} remaining`}</div>
+          </div>
+        `;
+      }
+    }
   } else if (status === "pending") {
     pendingPanel.classList.remove("hidden");
     vipActivePanel.classList.add("hidden");
     normalPanel.classList.add("hidden");
   } else {
+    // Covers 'free' and 'expired' — show normal upgrade panel
     normalPanel.classList.remove("hidden");
     pendingPanel.classList.add("hidden");
     vipActivePanel.classList.add("hidden");
+
+    // Show expiry notice if account just expired
+    if (status === "expired") {
+      const expiredBanner = document.getElementById("expired-notice-banner");
+      if (expiredBanner) expiredBanner.classList.remove("hidden");
+    }
   }
 }
 
@@ -808,18 +885,30 @@ function loadAdminPage() {
       pendingUsers.forEach(u => {
         const div = document.createElement("div");
         div.className = "payment-request-card";
-         div.innerHTML = `
-           <div>
-             <h4 class="text-white font-medium">${u.displayName || u.email}</h4>
-             <p class="text-sm text-gray mt-1">TxID/Ref: <span class="text-yellow font-mono">${u.paymentTxid}</span></p>
-             <p class="text-xs text-gray mt-1">Requested: ${new Date(u.paymentRequestedAt).toLocaleString()}</p>
-             ${u.paymentSlipUrl ? `<img src="${u.paymentSlipUrl}" class="payment-slip-thumb cursor-pointer" style="max-width:100px; margin-top:8px; border:1px solid var(--border-color);" onclick="openSlipModal('${u.paymentSlipUrl}')"/>` : ''}
-           </div>
-           <div class="action-buttons flex gap-2">
-             <button class="btn btn-primary btn-sm btn-approve" data-id="${u.uid}">Accept</button>
-             <button class="btn btn-secondary btn-sm btn-reject" data-id="${u.uid}">Reject</button>
-           </div>
-         `;
+        // Extract requested plan from paymentPlan field or default
+        const requestedPlan = u.paymentPlan || "1 Month";
+        div.innerHTML = `
+          <div>
+            <h4 class="text-white font-medium">${u.displayName || u.email}</h4>
+            <p class="text-sm text-gray mt-1">TxID/Ref: <span class="text-yellow font-mono">${u.paymentTxid}</span></p>
+            <p class="text-sm text-gray mt-1">Plan Requested: <span class="text-green font-bold">${requestedPlan}</span></p>
+            <p class="text-xs text-gray mt-1">Requested: ${new Date(u.paymentRequestedAt).toLocaleString()}</p>
+            ${u.paymentSlipUrl ? `<img src="${u.paymentSlipUrl}" class="payment-slip-thumb cursor-pointer" style="max-width:100px; margin-top:8px; border:1px solid var(--border-color);" onclick="openSlipModal('${u.paymentSlipUrl}')"/>` : ''}
+          </div>
+          <div class="action-buttons" style="display:flex;flex-direction:column;gap:8px;min-width:160px;">
+            <select class="form-control plan-select" data-id="${u.uid}" style="font-size:0.8rem;padding:6px 10px;">
+              <option value="7 Days" ${requestedPlan === '7 Days' ? 'selected' : ''}>7 Days</option>
+              <option value="2 Weeks" ${requestedPlan === '2 Weeks' ? 'selected' : ''}>2 Weeks</option>
+              <option value="1 Month" ${requestedPlan === '1 Month' ? 'selected' : ''}>1 Month</option>
+              <option value="3 Months" ${requestedPlan === '3 Months' ? 'selected' : ''}>3 Months</option>
+              <option value="Lifetime" ${requestedPlan === 'Lifetime' ? 'selected' : ''}>Lifetime</option>
+            </select>
+            <div style="display:flex;gap:6px;">
+              <button class="btn btn-primary btn-sm btn-approve" data-id="${u.uid}">✅ Accept</button>
+              <button class="btn btn-secondary btn-sm btn-reject" data-id="${u.uid}">❌ Reject</button>
+            </div>
+          </div>
+        `;
         pendingList.appendChild(div);
       });
 
@@ -827,9 +916,13 @@ function loadAdminPage() {
       document.querySelectorAll(".btn-approve").forEach(btn => {
         btn.addEventListener("click", async (e) => {
           const uid = e.target.getAttribute("data-id");
+          // Get the plan from the sibling select
+          const card = e.target.closest(".payment-request-card");
+          const planSelect = card ? card.querySelector(".plan-select") : null;
+          const chosenPlan = planSelect ? planSelect.value : "1 Month";
           e.target.disabled = true;
-          e.target.textContent = "Approving...";
-          await approvePremium(uid);
+          e.target.textContent = "Activating...";
+          await approvePremium(uid, chosenPlan);
         });
       });
 
@@ -845,18 +938,36 @@ function loadAdminPage() {
 
     // 2. User Accounts win/loss listing
     if (users.length === 0) {
-      userList.innerHTML = `<tr><td colspan="4" class="text-center py-3 text-gray">No users registered in system.</td></tr>`;
+      userList.innerHTML = `<tr><td colspan="5" class="text-center py-3 text-gray">No users registered in system.</td></tr>`;
     } else {
       users.forEach(u => {
         const winLoss = u.winLoss || { wins: 0, losses: 0 };
         const total = winLoss.wins + winLoss.losses;
         const winrate = total > 0 ? ((winLoss.wins / total) * 100).toFixed(1) + "%" : "0%";
+
+        // Compute expiry display
+        let expiryDisplay = "—";
+        if (u.premiumStatus === "paid") {
+          if (!u.premiumExpiresAt) {
+            expiryDisplay = `<span class="text-green font-bold">♾️ Lifetime</span>`;
+          } else {
+            const exp = new Date(u.premiumExpiresAt);
+            const now = new Date();
+            const daysLeft = Math.max(0, Math.ceil((exp - now) / (1000 * 60 * 60 * 24)));
+            const color = daysLeft <= 3 ? "text-red" : daysLeft <= 7 ? "text-yellow" : "text-green";
+            expiryDisplay = `<span class="${color} font-bold">${exp.toLocaleDateString("en-GB")} (${daysLeft}d left)</span>`;
+          }
+        } else if (u.premiumStatus === "expired") {
+          expiryDisplay = `<span class="text-red">Expired</span>`;
+        }
         
+        const statusBadgeClass = u.premiumStatus === 'paid' ? 'buy' : u.premiumStatus === 'pending' ? 'pending' : 'sell';
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td class="py-3 px-4 text-white font-medium">${u.displayName || "No Name"}</td>
           <td class="py-3 px-4">${u.email}</td>
-          <td class="py-3 px-4"><span class="badge-${u.premiumStatus === 'paid' ? 'buy' : u.premiumStatus === 'pending' ? 'pending' : 'sell'}">${u.premiumStatus.toUpperCase()}</span></td>
+          <td class="py-3 px-4"><span class="badge-${statusBadgeClass}">${(u.premiumStatus || "free").toUpperCase()}</span></td>
+          <td class="py-3 px-4">${u.activePlan ? `<span class="text-yellow font-bold">${u.activePlan}</span>` : "—"} ${expiryDisplay}</td>
           <td class="py-3 px-4 font-mono text-green">${winLoss.wins}W <span class="text-red">${winLoss.losses}L</span> (${winrate})</td>
         `;
         userList.appendChild(tr);
