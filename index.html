@@ -25,6 +25,15 @@
 </head>
 <body>
 
+  <!-- Live Crypto Ticker Bar -->
+  <div class="ticker-bar" id="ticker-bar">
+    <span class="ticker-label"><span class="ticker-live-dot"></span>Live</span>
+    <div class="ticker-track" id="ticker-track">
+      <!-- Populated by JS -->
+      <span class="ticker-item"><span class="t-pair">BTC/USDT</span> <span class="t-up">loading...</span></span>
+    </div>
+  </div>
+
   <!-- Global Loader -->
   <div id="global-loader" class="loader-overlay hidden">
     <div class="spinner"></div>
@@ -50,7 +59,7 @@
         <nav>
           <ul class="nav-links">
             <li><a href="#home" data-target="home" class="active">Home</a></li>
-            <li class="auth-link hidden"><a href="#signals" data-target="signals">Signals</a></li>
+            <li class="auth-link hidden"><a href="#signals" data-target="signals">Signals <span class="live-badge">Live</span></a></li>
             <li class="auth-link hidden"><a href="#bot" data-target="bot">Auto-Trading Bot</a></li>
             <li class="auth-link hidden"><a href="#account" data-target="account">Account</a></li>
             <li class="auth-link hidden" id="nav-admin-link"><a href="#admin" data-target="admin" class="text-yellow">Admin Panel</a></li>
@@ -85,7 +94,7 @@
         <h1 class="hero-title">Automate Your Binance Trades With <span>Real-Time Signals</span></h1>
         <p class="hero-subtitle">Get top-tier AI trading signals and deploy our high-accuracy bot via official Binance API keys. Maximize efficiency, secure gains, and trade smart.</p>
         <div class="hero-cta">
-          <a href="#auth" class="btn btn-primary guest-link">Create Free Account</a>
+          <a href="#auth" class="btn btn-primary btn-pulse guest-link">Create Free Account</a>
           <a href="#account" class="btn btn-secondary">Upgrade to Premium</a>
         </div>
       </div>
@@ -113,28 +122,76 @@
       </div>
     </div>
 
+    <!-- Stats Section -->
+    <div class="stats-section">
+      <div class="container stats-grid">
+        <div class="stat-item reveal">
+          <span class="stat-number" id="stat-accuracy">0</span>
+          <span class="stat-label">Average Signal Accuracy</span>
+        </div>
+        <div class="stat-item reveal" style="transition-delay: 0.1s;">
+          <span class="stat-number" id="stat-signals">0</span>
+          <span class="stat-label">Signals Published</span>
+        </div>
+        <div class="stat-item reveal" style="transition-delay: 0.2s;">
+          <span class="stat-number" id="stat-members">0</span>
+          <span class="stat-label">Active VIP Members</span>
+        </div>
+        <div class="stat-item reveal" style="transition-delay: 0.3s;">
+          <span class="stat-number" id="stat-winrate">0</span>
+          <span class="stat-label">Bot Win Rate</span>
+        </div>
+      </div>
+    </div>
+
     <!-- Features -->
-    <div class="container feature-grid">
-      <div class="feature-card">
+    <div class="container feature-grid" style="margin-top: 0; padding-top: 70px;">
+      <div class="feature-card reveal">
         <div class="feature-icon">
           <svg fill="currentColor" width="24" height="24" viewBox="0 0 20 20"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"></path></svg>
         </div>
         <h3>High-Accuracy Signals</h3>
-        <p>Premium members receive over 50+ accurate trading signals daily with entry, target, and stop-loss targets.</p>
+        <p>VIP members receive 100+ live Binance signals daily, auto-generated from real market data with entry, targets, and stop-loss.</p>
       </div>
-      <div class="feature-card">
+      <div class="feature-card reveal" style="transition-delay: 0.15s;">
         <div class="feature-icon">
           <svg fill="currentColor" width="24" height="24" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"></path></svg>
         </div>
-        <h3>AI Auto-Trading Bot</h3>
-        <p>Zero delay trade executions directly from our signal console straight to your Binance API account.</p>
+        <h3>Nexus AI Auto-Trader</h3>
+        <p>Zero delay trade executions directly from our signal console straight to your Binance API. Set and forget.</p>
       </div>
-      <div class="feature-card">
+      <div class="feature-card reveal" style="transition-delay: 0.3s;">
         <div class="feature-icon">
           <svg fill="currentColor" width="24" height="24" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M2.166 11.37A12.955 12.955 0 0010 15c2.91 0 5.613-.961 7.834-2.63a1 1 0 00.396-1.153l-1.026-3.08a1 1 0 00-1.185-.665l-2.073.415a1 1 0 00-.73-.73l-.415-2.073a1 1 0 00-.665-1.185l-3.08-1.026a1 1 0 00-1.153.396L6.5 6.5l-1.834.917A1 1 0 004 8.5v1.2a1 1 0 00-.834.834l-.833.834a1 1 0 00-.167.002z" clip-rule="evenodd"></path></svg>
         </div>
         <h3>Full Win/Loss Metrics</h3>
-        <p>Analyze performance metrics and track logs transparently, with real-time updates for maximum control.</p>
+        <p>Transparent performance logs with real-time PnL tracking, win rate analytics, and detailed trade history.</p>
+      </div>
+    </div>
+
+    <!-- Trust Badges -->
+    <div class="container">
+      <div class="trust-row">
+        <div class="trust-badge">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+          No Withdrawal Access Required
+        </div>
+        <div class="trust-badge">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          Real Binance Market Data
+        </div>
+        <div class="trust-badge">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          24/7 Signal Monitoring
+        </div>
+        <div class="trust-badge">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+          Encrypted API Keys
+        </div>
+        <div class="trust-badge">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0"/></svg>
+          Active Community
+        </div>
       </div>
     </div>
   </section>
@@ -247,78 +304,83 @@
   <section id="page-bot" class="hidden">
     <div class="container">
       <!-- Unsubscribed overlay lock screen -->
-      <div id="bot-lock-section" class="text-center" style="max-width: 550px; margin: 50px auto;">
+      <div id="bot-lock-section" class="text-center" style="max-width: 550px; margin: 50px auto; padding: 40px; background: rgba(255,198,0,0.03); border: 1px solid rgba(255,198,0,0.2); border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05); backdrop-filter: blur(10px);">
         <svg fill="currentColor" width="60" height="60" viewBox="0 0 20 20" class="text-yellow" style="filter: drop-shadow(var(--glow-gold)); margin-bottom: 20px;"><path d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2V7a5 5 0 00-5-5zM7 7a3 3 0 016 0v2H7V7z"></path></svg>
-        <h2 style="font-size: 2.2rem; font-weight: 800; margin-bottom: 10px;">Auto-Trading Locked</h2>
-        <p class="text-gray" style="margin-bottom: 25px;">Auto-Trading allows the bot to connect to your Binance API account and execute high accuracy signals instantly. Unlock access by upgrading to VIP Premium.</p>
-        <a href="#account" class="btn btn-primary">Upgrade to Premium</a>
+        <h2 style="font-size: 2.2rem; font-weight: 800; margin-bottom: 10px; background: linear-gradient(to right, #ffa800, #ffc600); -webkit-background-clip: text; color: transparent;">Auto-Trading Locked</h2>
+        <p class="text-gray" style="margin-bottom: 30px; font-size: 1.05rem; line-height: 1.6;">Auto-Trading allows our AI to connect directly to your Binance API and execute high-accuracy signals instantly. Unlock access by upgrading to VIP Premium.</p>
+        <a href="#account" class="btn btn-primary" style="padding: 12px 30px; font-size: 1.1rem; border-radius: 30px; box-shadow: var(--glow-gold);">Unlock Premium Access</a>
       </div>
 
       <!-- Main Bot Page Content -->
       <div id="bot-content-section" class="hidden">
-        <div class="dashboard-header">
-          <div class="dashboard-title">
-            <h2>AI Auto-Trading Bot Console</h2>
-            <p>Configure your Binance credentials and activate automated execution.</p>
+        <div class="dashboard-header" style="text-align: center; margin-bottom: 40px;">
+          <h2 style="font-size: 2.5rem; font-weight: 900; background: linear-gradient(to right, #ffffff, #a0a0a0); -webkit-background-clip: text; color: transparent; margin-bottom: 10px;">Nexus AI Auto-Trader</h2>
+          <p class="text-gray" style="font-size: 1.1rem;">Configure your Binance connection and activate autonomous trade execution.</p>
+        </div>
+
+        <!-- Premium Bot Metrics -->
+        <div class="bot-metrics" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px;">
+          <div class="metric-card" style="background: linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(0,255,136,0.05) 100%); border: 1px solid rgba(0,255,136,0.2); border-radius: 16px; padding: 25px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+            <span style="color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-size: 0.8rem; font-weight: 700;">Profitable Trades</span>
+            <div id="bot-wins" class="metric-value text-green" style="font-size: 2.8rem; font-weight: 900; margin-top: 10px; text-shadow: 0 0 20px rgba(0,255,136,0.4);">0</div>
+          </div>
+          <div class="metric-card" style="background: linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,51,102,0.05) 100%); border: 1px solid rgba(255,51,102,0.2); border-radius: 16px; padding: 25px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+            <span style="color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-size: 0.8rem; font-weight: 700;">Losses</span>
+            <div id="bot-losses" class="metric-value text-red" style="font-size: 2.8rem; font-weight: 900; margin-top: 10px; text-shadow: 0 0 20px rgba(255,51,102,0.4);">0</div>
+          </div>
+          <div class="metric-card" style="background: linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,198,0,0.05) 100%); border: 1px solid rgba(255,198,0,0.2); border-radius: 16px; padding: 25px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+            <span style="color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-size: 0.8rem; font-weight: 700;">Total PnL %</span>
+            <div id="bot-total-pnl" class="metric-value text-yellow" style="font-size: 2.8rem; font-weight: 900; margin-top: 10px; text-shadow: 0 0 20px rgba(255,198,0,0.4);">0.00%</div>
           </div>
         </div>
 
-        <!-- Stats row -->
-        <div class="bot-metrics">
-          <div class="metric-card">
-            <span>Wins</span>
-            <div id="bot-wins" class="metric-value text-green">0</div>
-          </div>
-          <div class="metric-card">
-            <span>Losses</span>
-            <div id="bot-losses" class="metric-value text-red">0</div>
-          </div>
-          <div class="metric-card">
-            <span>Total PnL %</span>
-            <div id="bot-total-pnl" class="metric-value">0.00%</div>
-          </div>
-        </div>
-
-        <div class="bot-panel-layout">
+        <div class="bot-panel-layout" style="display: grid; grid-template-columns: 1fr 380px; gap: 30px;">
           <!-- Left side: Execution log and history -->
-          <div>
-            <div class="bot-card">
-              <h3>Bot Control Panel</h3>
-              <div class="switch-control-box">
-                <div class="bot-status-container">
-                  <div id="bot-status-indicator" class="status-dot dot-inactive"></div>
-                  <div>
-                    <span id="bot-status-text" class="text-red font-bold text-sm tracking-wide">BOT INACTIVE</span>
-                    <p class="text-gray" style="font-size: 0.8rem; margin-top: 2px;">Deploying trades based on published signals</p>
+          <div style="display: flex; flex-direction: column; gap: 30px;">
+            <div class="bot-card" style="background: rgba(20,20,25,0.7); border: 1px solid var(--border-color); border-radius: 16px; padding: 25px; backdrop-filter: blur(10px);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0; font-size: 1.4rem; font-weight: 800; display: flex; align-items: center; gap: 10px;">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--color-primary);"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                  Bot Execution Engine
+                </h3>
+                
+                <div class="switch-control-box" style="display: flex; align-items: center; gap: 15px; background: rgba(0,0,0,0.3); padding: 8px 16px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.05);">
+                  <div class="bot-status-container" style="display: flex; align-items: center; gap: 10px;">
+                    <div id="bot-status-indicator" class="status-dot dot-inactive" style="width: 12px; height: 12px; border-radius: 50%; box-shadow: 0 0 10px currentColor;"></div>
+                    <span id="bot-status-text" class="text-red font-bold text-sm tracking-wide" style="text-transform: uppercase;">Engine Offline</span>
                   </div>
+                  <div style="width: 1px; height: 20px; background: var(--border-color);"></div>
+                  <label class="switch" style="margin: 0;">
+                    <input type="checkbox" id="bot-toggle-btn">
+                    <span class="slider" style="border-radius: 30px;"></span>
+                  </label>
                 </div>
-                <label class="switch">
-                  <input type="checkbox" id="bot-toggle-btn">
-                  <span class="slider"></span>
-                </label>
               </div>
 
-              <div class="terminal-log" id="bot-log">
-                <div>[System Initialized] Connect your API key and toggle switch to start auto-trading.</div>
+              <div class="terminal-log" id="bot-log" style="background: #0a0a0f; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 15px; height: 200px; overflow-y: auto; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; color: #a0a0a0; box-shadow: inset 0 5px 20px rgba(0,0,0,0.5);">
+                <div style="color: #4CAF50;">[System Core] Nexus Engine initialized. Waiting for API linkage...</div>
               </div>
             </div>
 
-            <div class="bot-card">
-              <h3>Trade Log History</h3>
-              <div class="table-wrapper">
-                <table class="trade-table">
-                  <thead>
+            <div class="bot-card" style="background: rgba(20,20,25,0.7); border: 1px solid var(--border-color); border-radius: 16px; padding: 25px; backdrop-filter: blur(10px);">
+              <h3 style="margin-top: 0; margin-bottom: 20px; font-size: 1.4rem; font-weight: 800; display: flex; align-items: center; gap: 10px;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--color-buy);"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>
+                Autonomous Trade History
+              </h3>
+              <div class="table-wrapper" style="border-radius: 12px; overflow: auto; border: 1px solid rgba(255,255,255,0.05);">
+                <table class="trade-table" style="width: 100%; border-collapse: collapse; text-align: left;">
+                  <thead style="background: rgba(0,0,0,0.4); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px;">
                     <tr>
-                      <th class="py-3 px-4">Market Asset</th>
-                      <th class="py-3 px-4">Type</th>
-                      <th class="py-3 px-4">Leverage</th>
-                      <th class="py-3 px-4">Margin/Risk</th>
-                      <th class="py-3 px-4">Entry price</th>
-                      <th class="py-3 px-4">Status</th>
-                      <th class="py-3 px-4">PnL</th>
+                      <th class="py-3 px-4 text-gray" style="font-weight: 600;">Market Asset</th>
+                      <th class="py-3 px-4 text-gray" style="font-weight: 600;">Type</th>
+                      <th class="py-3 px-4 text-gray" style="font-weight: 600;">Lev</th>
+                      <th class="py-3 px-4 text-gray" style="font-weight: 600;">Risk</th>
+                      <th class="py-3 px-4 text-gray" style="font-weight: 600;">Entry</th>
+                      <th class="py-3 px-4 text-gray" style="font-weight: 600;">Status</th>
+                      <th class="py-3 px-4 text-gray" style="font-weight: 600;">PnL</th>
                     </tr>
                   </thead>
-                  <tbody id="bot-trades-list">
+                  <tbody id="bot-trades-list" style="font-size: 0.95rem;">
                     <!-- Logs inserted dynamically -->
                   </tbody>
                 </table>
@@ -326,25 +388,52 @@
             </div>
           </div>
 
-          <!-- Right side: Binance Settings -->
-          <div>
-            <div class="bot-card">
-              <h3>Binance API Credentials</h3>
-              <p class="text-gray" style="font-size: 0.85rem; margin-bottom: 20px; line-height: 1.4;">Provide your Read & Spot Trading API keys from Binance. Do NOT enable withdrawal permissions for your security.</p>
+          <!-- Right side: Binance Settings & Tutorial -->
+          <div style="display: flex; flex-direction: column; gap: 30px;">
+            <!-- Settings Card -->
+            <div class="bot-card" style="background: rgba(20,20,25,0.8); border: 1px solid var(--color-primary); border-radius: 16px; padding: 25px; position: relative; overflow: hidden;">
+              <div style="position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: linear-gradient(90deg, #ffa800, var(--color-primary));"></div>
+              <h3 style="margin-top: 0; font-size: 1.3rem; font-weight: 800; display: flex; align-items: center; gap: 10px;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--color-primary);"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                Binance Connection
+              </h3>
+              <p class="text-gray" style="font-size: 0.85rem; margin-bottom: 20px; line-height: 1.5;">Securely connect your Binance account. Your keys are encrypted. <span class="text-yellow" style="font-weight: 700;">Never grant withdrawal permissions.</span></p>
               
               <form id="bot-settings-form">
-                <div class="form-group">
-                  <label for="binance-api-key">API Key</label>
-                  <input type="text" id="binance-api-key" class="form-control font-mono" placeholder="Binance API Key" required>
+                <div class="form-group" style="margin-bottom: 15px;">
+                  <label for="binance-api-key" style="font-size: 0.8rem; color: var(--text-muted);">API Key</label>
+                  <input type="text" id="binance-api-key" class="form-control font-mono" placeholder="Paste your Binance API Key" required style="background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); padding: 12px; font-size: 0.9rem;">
                 </div>
-                <div class="form-group">
-                  <label for="binance-api-secret">API Secret Key</label>
-                  <input type="password" id="binance-api-secret" class="form-control font-mono" placeholder="Binance API Secret" required>
+                <div class="form-group" style="margin-bottom: 20px;">
+                  <label for="binance-api-secret" style="font-size: 0.8rem; color: var(--text-muted);">API Secret Key</label>
+                  <input type="password" id="binance-api-secret" class="form-control font-mono" placeholder="Paste your API Secret Key" required style="background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); padding: 12px; font-size: 0.9rem;">
                 </div>
-                <button type="submit" class="btn btn-primary" style="width: 100%;">Save Connection Settings</button>
-                <div id="bot-settings-msg" class="status-message text-center mt-4"></div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px; font-weight: 800; letter-spacing: 0.5px;">Save & Encrypt Keys</button>
+                <div id="bot-settings-msg" class="status-message text-center mt-3" style="font-size: 0.85rem;"></div>
               </form>
             </div>
+
+            <!-- Tutorial Card -->
+            <div class="bot-card" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 25px;">
+              <h3 style="margin-top: 0; font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; gap: 8px; margin-bottom: 15px;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue" style="color: #60a5fa;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                How to get API Keys
+              </h3>
+              
+              <ol style="margin: 0; padding-left: 15px; color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6; display: flex; flex-direction: column; gap: 12px;">
+                <li><strong class="text-white">Log into Binance</strong> and go to the <em>API Management</em> section from your profile menu.</li>
+                <li><strong class="text-white">Create a New API</strong>: Choose 'System generated', enter a label like "Nexus Bot", and pass the security verification.</li>
+                <li><strong class="text-white">Edit Restrictions</strong>: Click 'Edit restrictions'. You must check <strong class="text-green">Enable Spot & Margin Trading</strong> so the bot can execute trades.</li>
+                <li><strong class="text-white">Security Check</strong>: Leave <strong class="text-red">Enable Withdrawals UNCHECKED</strong>. We will never ask for withdrawal access.</li>
+                <li><strong class="text-white">Copy Keys</strong>: Copy both your API Key and Secret Key into the form above and save.</li>
+              </ol>
+
+              <div style="margin-top: 20px; padding-top: 15px; border-top: 1px dashed rgba(255,255,255,0.1); display: flex; align-items: center; gap: 10px; font-size: 0.8rem; color: var(--text-muted);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-yellow" style="flex-shrink: 0;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                <span>For detailed instructions, <a href="https://www.binance.com/en/support/faq/how-to-create-api-keys-on-binance-360002502072" target="_blank" style="color: var(--color-primary); text-decoration: underline;">read Binance's official guide</a>.</span>
+              </div>
+            </div>
+
           </div>
         </div>
       </div>
@@ -699,8 +788,109 @@
     </div>
   </div>
 
+  <!-- Site Footer -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="#home" style="display:inline-flex;align-items:center;gap:0;text-decoration:none;">
+            <span style="font-size:1.25rem;font-weight:900;color:#fff;font-family:'Inter',sans-serif;text-transform:uppercase;">THIN<span style="color:var(--color-primary);">z</span></span>
+            <span style="font-size:1.25rem;font-weight:900;color:var(--color-primary);font-family:'Inter',sans-serif;margin-left:5px;">Banda</span>
+          </a>
+          <p>Professional crypto trading signals and AI-powered auto-trading bot for Binance. Real market data. Real results.</p>
+          <a href="https://www.youtube.com/@THINzBanda" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;margin-top:16px;color:#ff0000;font-weight:700;font-size:0.85rem;transition:opacity 0.2s;">
+            <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.11C19.517 3.545 12 3.545 12 3.545s-7.516 0-9.387.507a3.003 3.003 0 0 0-2.11 2.11C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 0 0 2.11 2.11c1.871.507 9.388.507 9.388.507s7.518 0 9.388-.507a3.003 3.003 0 0 0 2.11-2.11C24 15.967 24 12 24 12s0-3.967-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+            Watch on YouTube
+          </a>
+        </div>
+        <div>
+          <div class="footer-heading">Platform</div>
+          <ul class="footer-links">
+            <li><a href="#home">Home</a></li>
+            <li><a href="#signals">Live Signals</a></li>
+            <li><a href="#bot">Auto-Trading Bot</a></li>
+            <li><a href="#account">Upgrade to VIP</a></li>
+            <li><a href="#auth">Sign In</a></li>
+          </ul>
+        </div>
+        <div>
+          <div class="footer-heading">Info</div>
+          <ul class="footer-links">
+            <li><a href="#home">2 Free Signals/Day</a></li>
+            <li><a href="#account">VIP Membership Plans</a></li>
+            <li><a href="#bot">Binance API Setup Guide</a></li>
+            <li><a href="https://www.binance.com" target="_blank">Binance Exchange</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-disclaimer">
+        ⚠️ <strong>Risk Disclaimer:</strong> Crypto trading involves substantial risk of loss. Signals are for informational purposes only and do not constitute financial advice. Past performance is not indicative of future results. Never invest more than you can afford to lose.
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 THINz Banda. All rights reserved.</span>
+        <span style="display:flex;align-items:center;gap:6px;"><span class="ticker-live-dot"></span> Live signals powered by Binance API</span>
+      </div>
+    </div>
+  </footer>
+
   <!-- Import main application loader -->
   <script type="module" src="js/app.js?v=6"></script>
+
+  <!-- Ticker + Stats + Scroll Reveal Scripts -->
+  <script>
+    // ── Live Ticker ──
+    async function loadTicker() {
+      try {
+        const res = await fetch('https://api.binance.com/api/v3/ticker/24hr');
+        const data = await res.json();
+        const top = data
+          .filter(d => d.symbol.endsWith('USDT') && parseFloat(d.quoteVolume) > 1e7)
+          .sort((a,b) => parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume))
+          .slice(0, 20);
+        const track = document.getElementById('ticker-track');
+        if (!track) return;
+        const items = top.map(p => {
+          const chg = parseFloat(p.priceChangePercent);
+          const cls = chg >= 0 ? 't-up' : 't-down';
+          const sign = chg >= 0 ? '+' : '';
+          return `<span class="ticker-item"><span class="t-pair">${p.symbol.replace('USDT','/USDT')}</span> <span class="${cls}">${sign}${chg.toFixed(2)}%</span></span>`;
+        }).join('');
+        // Duplicate for seamless loop
+        track.innerHTML = items + items;
+      } catch(e) { console.log('Ticker failed:', e); }
+    }
+    loadTicker();
+
+    // ── Animated Stats Counters ──
+    function animateCounter(el, target, suffix, duration) {
+      let start = 0;
+      const step = target / (duration / 16);
+      const timer = setInterval(() => {
+        start += step;
+        if (start >= target) { start = target; clearInterval(timer); }
+        el.textContent = Math.floor(start) + suffix;
+      }, 16);
+    }
+
+    // ── Scroll Reveal Observer ──
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          // Trigger counters when stats come into view
+          if (entry.target.closest('.stats-grid')) {
+            animateCounter(document.getElementById('stat-accuracy'), 96, '%+', 1800);
+            animateCounter(document.getElementById('stat-signals'), 2400, '+', 2000);
+            animateCounter(document.getElementById('stat-members'), 380, '+', 1600);
+            animateCounter(document.getElementById('stat-winrate'), 94, '%', 1800);
+          }
+          revealObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.15 });
+
+    document.querySelectorAll('.reveal, .reveal-left, .reveal-right').forEach(el => revealObserver.observe(el));
+  </script>
 
 </body>
 </html>
