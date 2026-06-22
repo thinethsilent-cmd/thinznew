@@ -1753,3 +1753,88 @@ input:checked + .slider:before {
 @media (max-width: 480px) {
   .stats-grid { grid-template-columns: 1fr; }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   SIGNAL CARD CONFLUENCE ANALYSIS & META BADGES
+   ═══════════════════════════════════════════════════════════ */
+.signal-analysis {
+  margin-top: 15px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.signal-analysis .analysis-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.signal-analysis .analysis-text {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  font-style: italic;
+}
+
+.signal-meta-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 15px;
+}
+
+.meta-badge {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.meta-badge.leverage-badge {
+  background: rgba(255, 198, 0, 0.1);
+  border-color: rgba(255, 198, 0, 0.25);
+  color: #ffc600;
+}
+
+.meta-badge.rrr-badge {
+  background: rgba(99, 102, 241, 0.1);
+  border-color: rgba(99, 102, 241, 0.25);
+  color: #a5b4fc;
+}
+
+.meta-badge.rsi-badge {
+  background: rgba(6, 182, 212, 0.1);
+  border-color: rgba(6, 182, 212, 0.25);
+  color: #67e8f9;
+}
+
+.meta-badge.confluence-badge {
+  background: rgba(236, 72, 153, 0.1);
+  border-color: rgba(236, 72, 153, 0.25);
+  color: #fbcfe8;
+}
+
+.meta-badge.accuracy-badge {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.25);
+  color: #6ee7b7;
+}
+
+.meta-badge.free-badge {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--border-color);
+  color: var(--text-secondary);
+}
+
+.meta-badge.vip-badge {
+  background: rgba(243, 186, 47, 0.15);
+  border-color: rgba(243, 186, 47, 0.35);
+  color: var(--color-primary);
+  box-shadow: 0 0 8px rgba(243, 186, 47, 0.1);
+}

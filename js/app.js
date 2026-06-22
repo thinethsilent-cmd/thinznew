@@ -582,13 +582,15 @@ function loadSignalsPage() {
       const badgeClass = sig.status === "Win" ? "status-win" : sig.status === "Loss" ? "status-loss" : "status-pending";
       const targetsList = sig.targets.map((t, idx) => `<li>Target ${idx + 1}: <span class="text-white font-medium">${t}</span></li>`).join("");
 
-      // Extra meta badges for free signals (leverage, min trade, accuracy)
-      const metaBadges = (!sig.locked && (sig.leverage || sig.minTrade || sig.accuracy)) ? `
-        <div class="signal-meta-row" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
-          ${sig.leverage ? `<span class="meta-badge" style="background:rgba(255,198,0,0.12);border:1px solid rgba(255,198,0,0.35);color:#ffc600;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;">⚡ ${sig.leverage} Leverage</span>` : ""}
-          ${sig.minTrade ? `<span class="meta-badge" style="background:rgba(0,255,136,0.10);border:1px solid rgba(0,255,136,0.3);color:#00ff88;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;">💰 Min ${sig.minTrade}</span>` : ""}
-          ${sig.accuracy ? `<span class="meta-badge" style="background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.35);color:#818cf8;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;">🎯 ${sig.accuracy} Accuracy</span>` : ""}
-          ${sig.tier === "free" ? `<span class="meta-badge" style="background:rgba(255,255,255,0.05);border:1px solid var(--border-color);color:var(--text-muted);padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:600;">FREE Signal</span>` : ""}
+      // Extra meta badges for unlocked signals (leverage, rrr, rsi, confluence, accuracy)
+      const metaBadges = !sig.locked ? `
+        <div class="signal-meta-row">
+          ${sig.leverage ? `<span class="meta-badge leverage-badge">⚡ ${sig.leverage} Leverage</span>` : ""}
+          ${sig.rrr ? `<span class="meta-badge rrr-badge">🔢 R:R ${sig.rrr}</span>` : ""}
+          ${sig.rsi ? `<span class="meta-badge rsi-badge">📊 RSI ${sig.rsi}</span>` : ""}
+          ${sig.confluenceScore ? `<span class="meta-badge confluence-badge">✨ Confluence ${sig.confluenceScore}</span>` : ""}
+          ${sig.accuracy ? `<span class="meta-badge accuracy-badge">🎯 ${sig.accuracy} Acc</span>` : ""}
+          ${sig.tier === "free" ? `<span class="meta-badge free-badge">FREE Signal</span>` : `<span class="meta-badge vip-badge">⭐ VIP</span>`}
         </div>
       ` : "";
 
@@ -615,6 +617,10 @@ function loadSignalsPage() {
             <ul>${targetsList}</ul>
           </div>
         </div>
+        <div class="signal-analysis">
+          <div class="analysis-title">🔬 Confluence Analysis</div>
+          <div class="analysis-text">${sig.analysisText || 'Real-time indicators alignment check'}</div>
+        </div>
         ${metaBadges}
       `;
 
@@ -624,7 +630,7 @@ function loadSignalsPage() {
           <div class="lock-overlay">
             <svg class="lock-icon" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2V7a5 5 0 00-5-5zM7 7a3 3 0 016 0v2H7V7z"></path></svg>
             <h4 class="lock-title">VIP Premium Signal – ${sig.pair}</h4>
-            <p class="lock-desc">High-leverage entry with up to 98% accuracy. Upgrade to unlock all signals + auto-bot.</p>
+            <p class="lock-desc">Real TA-Verified VIP signal with up to 98% accuracy. Upgrade to unlock all signals + auto-bot.</p>
             <a href="#account" class="btn btn-primary btn-sm">Unlock with Premium</a>
           </div>
           <div class="signal-header blurred">

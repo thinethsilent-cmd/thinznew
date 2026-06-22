@@ -379,6 +379,18 @@ export function loadSignalsPage() {
       card.className = `signal-card ${sig.direction.toLowerCase() === 'buy' ? 'card-buy' : 'card-sell'}`;
       const badgeClass = sig.status === 'Win' ? 'status-win' : sig.status === 'Loss' ? 'status-loss' : 'status-pending';
       const targetsList = sig.targets.map((t, i) => `<li>Target ${i + 1}: <span class="text-white font-medium">${t}</span></li>`).join('');
+      // Extra meta badges for unlocked signals (leverage, rrr, rsi, confluence, accuracy)
+      const metaBadges = !sig.locked ? `
+        <div class="signal-meta-row">
+          ${sig.leverage ? `<span class="meta-badge leverage-badge">⚡ ${sig.leverage} Leverage</span>` : ""}
+          ${sig.rrr ? `<span class="meta-badge rrr-badge">🔢 R:R ${sig.rrr}</span>` : ""}
+          ${sig.rsi ? `<span class="meta-badge rsi-badge">📊 RSI ${sig.rsi}</span>` : ""}
+          ${sig.confluenceScore ? `<span class="meta-badge confluence-badge">✨ Confluence ${sig.confluenceScore}</span>` : ""}
+          ${sig.accuracy ? `<span class="meta-badge accuracy-badge">🎯 ${sig.accuracy} Acc</span>` : ""}
+          ${sig.tier === 'free' ? `<span class="meta-badge free-badge">FREE Signal</span>` : `<span class="meta-badge vip-badge">⭐ VIP</span>`}
+        </div>
+      ` : "";
+
       let html = `
         <div class="signal-header">
           <div>
@@ -393,14 +405,19 @@ export function loadSignalsPage() {
           <div class="signal-detail"><span>Stop Loss</span><strong class="text-red">${sig.stopLoss}</strong></div>
           <div class="signal-targets"><span>Take Profit Targets</span><ul>${targetsList}</ul></div>
         </div>
+        <div class="signal-analysis">
+          <div class="analysis-title">🔬 Confluence Analysis</div>
+          <div class="analysis-text">${sig.analysisText || 'Real-time indicators alignment check'}</div>
+        </div>
+        ${metaBadges}
       `;
       if (sig.locked) {
         card.classList.add('locked-card');
         html = `
           <div class="lock-overlay">
             <svg class="lock-icon" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2V7a5 5 0 00-5-5zM7 7a3 3 0 016 0v2H7V7z"/></svg>
-            <h4 class="lock-title">VIP Premium Signal</h4>
-            <p class="lock-desc">Access high‑accuracy VIP signals and auto‑trading.</p>
+            <h4 class="lock-title">VIP Premium Signal – ${sig.pair}</h4>
+            <p class="lock-desc">Real TA-Verified VIP signal with up to 98% accuracy. Upgrade to unlock all signals + auto-bot.</p>
             <a href="account.html" class="btn btn-primary btn-sm">Upgrade</a>
           </div>
           <div class="signal-header blurred">
@@ -409,7 +426,7 @@ export function loadSignalsPage() {
               <span class="signal-direction">${sig.direction}</span>
               <span class="signal-timeframe">${sig.timeframe}</span>
             </div>
-            <span class="signal-status-badge">Locked</span>
+            <span class="signal-status-badge">🔒 VIP</span>
           </div>
           <div class="signal-body blurred">
             <div class="signal-detail"><span>Entry Target</span><strong>•••</strong></div>
