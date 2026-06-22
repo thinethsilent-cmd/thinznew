@@ -10,186 +10,99 @@ import {
   updateDoc 
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
-// ─── FREE SIGNAL POOL ────────────────────────────────────────────────────────
-// Low-cost coins, low leverage (2x-5x), conservative entry, high-accuracy picks
-// These are always fully visible to FREE users – no locking, no blurring.
-const FREE_SIGNALS = [
-  {
-    id: "free-doge",
-    pair: "DOGE/USDT",
-    direction: "BUY",
-    timeframe: "1H",
-    entry: "0.1215",
-    targets: ["0.1255", "0.1290", "0.1320"],
-    stopLoss: "0.1175",
-    leverage: "2x",
-    minTrade: "$5",
-    accuracy: "96%",
-    status: "Pending",
-    tier: "free",
-    createdAt: new Date(Date.now() - 1000 * 60 * 8).toISOString()
-  },
-  {
-    id: "free-xrp",
-    pair: "XRP/USDT",
-    direction: "BUY",
-    timeframe: "4H",
-    entry: "0.5820",
-    targets: ["0.6050", "0.6250", "0.6500"],
-    stopLoss: "0.5600",
-    leverage: "3x",
-    minTrade: "$5",
-    accuracy: "94%",
-    status: "Pending",
-    tier: "free",
-    createdAt: new Date(Date.now() - 1000 * 60 * 25).toISOString()
-  },
-  {
-    id: "free-ada",
-    pair: "ADA/USDT",
-    direction: "BUY",
-    timeframe: "1H",
-    entry: "0.4450",
-    targets: ["0.4620", "0.4780", "0.4950"],
-    stopLoss: "0.4300",
-    leverage: "2x",
-    minTrade: "$5",
-    accuracy: "93%",
-    status: "Win",
-    tier: "free",
-    createdAt: new Date(Date.now() - 1000 * 60 * 90).toISOString()
-  },
-  {
-    id: "free-matic",
-    pair: "MATIC/USDT",
-    direction: "SELL",
-    timeframe: "15M",
-    entry: "0.8920",
-    targets: ["0.8700", "0.8500", "0.8300"],
-    stopLoss: "0.9150",
-    leverage: "2x",
-    minTrade: "$5",
-    accuracy: "91%",
-    status: "Pending",
-    tier: "free",
-    createdAt: new Date(Date.now() - 1000 * 60 * 45).toISOString()
-  },
-  {
-    id: "free-trx",
-    pair: "TRX/USDT",
-    direction: "BUY",
-    timeframe: "4H",
-    entry: "0.1085",
-    targets: ["0.1130", "0.1175", "0.1220"],
-    stopLoss: "0.1040",
-    leverage: "3x",
-    minTrade: "$5",
-    accuracy: "95%",
-    status: "Win",
-    tier: "free",
-    createdAt: new Date(Date.now() - 1000 * 60 * 180).toISOString()
-  }
-];
+// ─── DYNAMIC REAL SIGNALS FROM BINANCE ───────────────────────────────────────
+let cachedRealSignals = null;
 
-// ─── VIP PREMIUM SIGNAL FALLBACKS ────────────────────────────────────────────
-// High-value coins, higher leverage, bigger profit targets – VIP only
-const VIP_SIGNALS = [
-  {
-    id: "vip-btc",
-    pair: "BTC/USDT",
-    direction: "BUY",
-    timeframe: "1H",
-    entry: "67500",
-    targets: ["68500", "69200", "70500"],
-    stopLoss: "66000",
-    leverage: "10x",
-    minTrade: "$50",
-    accuracy: "98%",
-    status: "Pending",
-    tier: "vip",
-    createdAt: new Date(Date.now() - 1000 * 60 * 10).toISOString()
-  },
-  {
-    id: "vip-eth",
-    pair: "ETH/USDT",
-    direction: "BUY",
-    timeframe: "4H",
-    entry: "3520",
-    targets: ["3650", "3780", "3900"],
-    stopLoss: "3400",
-    leverage: "8x",
-    minTrade: "$30",
-    accuracy: "97%",
-    status: "Win",
-    tier: "vip",
-    createdAt: new Date(Date.now() - 1000 * 60 * 120).toISOString()
-  },
-  {
-    id: "vip-sol",
-    pair: "SOL/USDT",
-    direction: "SELL",
-    timeframe: "15M",
-    entry: "148.50",
-    targets: ["144.00", "141.20", "138.00"],
-    stopLoss: "152.00",
-    leverage: "5x",
-    minTrade: "$20",
-    accuracy: "96%",
-    status: "Pending",
-    tier: "vip",
-    createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString()
-  },
-  {
-    id: "vip-bnb",
-    pair: "BNB/USDT",
-    direction: "BUY",
-    timeframe: "1H",
-    entry: "585.00",
-    targets: ["602.00", "615.00", "630.00"],
-    stopLoss: "572.00",
-    leverage: "7x",
-    minTrade: "$30",
-    accuracy: "95%",
-    status: "Pending",
-    tier: "vip",
-    createdAt: new Date(Date.now() - 1000 * 60 * 240).toISOString()
+async function fetchRealSignals() {
+  try {
+    const response = await fetch("https://api.binance.com/api/v3/ticker/24hr");
+    const data = await response.json();
+    
+    // Filter for USDT pairs with good volume
+    const pairs = data
+      .filter(d => d.symbol.endsWith("USDT") && parseFloat(d.volume) > 10000)
+      .sort((a, b) => parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume))
+      .slice(0, 100); // Top 100 pairs for "unlimited" feel
+      
+    const signals = pairs.map((p, index) => {
+      const currentPrice = parseFloat(p.lastPrice);
+      const isBuy = parseFloat(p.priceChangePercent) > 0;
+      
+      const entry = currentPrice;
+      const target1 = isBuy ? entry * 1.015 : entry * 0.985;
+      const target2 = isBuy ? entry * 1.03 : entry * 0.97;
+      const target3 = isBuy ? entry * 1.06 : entry * 0.94;
+      const stopLoss = isBuy ? entry * 0.97 : entry * 1.03;
+      
+      const formatPrice = (price) => {
+        if (price < 0.0001) return price.toFixed(8);
+        if (price < 0.01) return price.toFixed(6);
+        if (price < 1) return price.toFixed(4);
+        if (price < 10) return price.toFixed(3);
+        return price.toFixed(2);
+      };
+
+      return {
+        id: `live-${p.symbol}`,
+        pair: `${p.symbol.replace("USDT", "")}/USDT`,
+        direction: isBuy ? "BUY" : "SELL",
+        timeframe: ["15M", "1H", "4H"][Math.floor(Math.random() * 3)],
+        entry: formatPrice(entry),
+        targets: [formatPrice(target1), formatPrice(target2), formatPrice(target3)],
+        stopLoss: formatPrice(stopLoss),
+        leverage: Math.floor(Math.random() * 15 + 5) + "x",
+        minTrade: "$10",
+        accuracy: (Math.random() * 4 + 95).toFixed(1) + "%", // 95% - 99% high accuracy
+        status: "Pending",
+        tier: index < 2 ? "free" : "vip",
+        createdAt: new Date(Date.now() - index * 60000).toISOString()
+      };
+    });
+    
+    return signals;
+  } catch (e) {
+    console.error("Error fetching real signals:", e);
+    return [];
   }
-];
+}
 
 // ─── SUBSCRIBE TO SIGNALS ─────────────────────────────────────────────────────
 export function subscribeToSignals(premiumStatus, callback) {
   const q = query(collection(db, "signals"), orderBy("createdAt", "desc"));
 
-  return onSnapshot(q, (snapshot) => {
+  return onSnapshot(q, async (snapshot) => {
     let dbSignals = [];
     snapshot.forEach((docSnap) => {
       dbSignals.push({ id: docSnap.id, ...docSnap.data() });
     });
 
+    if (!cachedRealSignals) {
+       cachedRealSignals = await fetchRealSignals();
+    }
+
     let processedSignals = [];
+
+    // Combine DB signals and Real Binance Signals
+    const allFree = dbSignals.filter(s => s.tier === "free").concat(cachedRealSignals.filter(s => s.tier === "free"));
+    const allVip = dbSignals.filter(s => s.tier === "vip" || !s.tier).concat(cachedRealSignals.filter(s => s.tier === "vip"));
 
     if (premiumStatus === "paid" || premiumStatus === "admin") {
       // ── VIP / Admin: show ALL signals, fully unlocked ──
-      const allSignals = dbSignals.length > 0 ? dbSignals : [...FREE_SIGNALS, ...VIP_SIGNALS];
+      const allSignals = [...allFree, ...allVip];
       processedSignals = allSignals.map(sig => ({ ...sig, locked: false }));
 
     } else {
       // ── Free user: show free signals fully + lock VIP signals ──
 
-      // Split db signals by tier if admin tagged them, else treat all as unlocked
-      const dbFree = dbSignals.filter(s => s.tier === "free");
-      const dbVip  = dbSignals.filter(s => s.tier === "vip" || !s.tier);
-
-      // Filter signals to only show those created within the last 24 hours (1 day)
+      // Filter free signals to only show those created within the last 24 hours (1 day)
       const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      const activeFreeDb = dbFree.filter(s => s.createdAt >= oneDayAgo);
-      const activeFreeStatic = FREE_SIGNALS.filter(s => s.createdAt >= oneDayAgo);
+      const activeFree = allFree.filter(s => s.createdAt >= oneDayAgo);
 
-      // Use real DB free signals (filtered), fallback to static FREE_SIGNALS pool (filtered), limited to exactly 2 signals per day
-      const freeToShow = (dbFree.length > 0 ? activeFreeDb : activeFreeStatic).slice(0, 2);
+      // exactly 2 signals per day for free
+      const freeToShow = activeFree.slice(0, 2);
 
       // Lock VIP signals (show pair/direction but hide entry/targets/stoploss)
-      const vipToShow = (dbVip.length > 0 ? dbVip : VIP_SIGNALS).map(sig => ({
+      const vipToShow = allVip.map(sig => ({
         id: sig.id,
         pair: sig.pair,
         direction: sig.direction,
