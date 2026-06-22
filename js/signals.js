@@ -463,9 +463,9 @@ export function subscribeToSignals(premiumStatus, callback) {
       }));
 
     } else {
-      // ── Free user: exactly 2 signals unlocked, rest locked ────────────
+      // ── Free user: exactly 1 signal unlocked, rest locked ────────────
       const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      const activeFree = allFree.filter(s => s.createdAt >= oneDayAgo).slice(0, 2);
+      const activeFree = allFree.filter(s => s.createdAt >= oneDayAgo).slice(0, 1);
 
       const vipLocked = allVip.map(sig => ({
         id: sig.id,
