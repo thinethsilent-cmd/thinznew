@@ -150,7 +150,7 @@ function getSupportResistance(highs, lows, closes, atr) {
 // ══════════════════════════════════════════════════════════════════════════════
 //  MAIN SIGNAL ENGINE  –  Analyse a single coin using all indicators
 // ══════════════════════════════════════════════════════════════════════════════
-async function analyseSymbol(symbol, interval = "1h") {
+export async function analyseSymbol(symbol, interval = "1h", force = false) {
   try {
     const url = `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=150`;
     const res  = await fetch(url);
@@ -294,23 +294,24 @@ async function analyseSymbol(symbol, interval = "1h") {
     const isBull = bullScore >= MIN_SCORE && bullScore > bearScore;
     const isBear = bearScore >= MIN_SCORE && bearScore > bullScore;
 
-    if (!isBull && !isBear) return null; // Weak signal – skip
+    if (!isBull && !isBear && !force) return null; // Weak signal – skip
 
-    const direction = isBull ? "BUY" : "SELL";
-    const score     = isBull ? bullScore : bearScore;
+    const direction = isBull ? "BUY" : (isBear ? "SELL" : "NEUTRAL");
+    const score     = isBull ? bullScore : (isBear ? bearScore : Math.max(bullScore, bearScore));
 
     // ── Entry / Target / Stop Loss using ATR ─────────────────────────────
     const { resistance, support } = getSupportResistance(highs, lows, closes, atr);
 
     let entry, tp1, tp2, tp3, stopLoss;
-    if (isBull) {
-      // Slight pullback entry (0.2 ATR below close)
+    if (direction === "BUY" || (direction === "NEUTRAL" && bullScore >= bearScore)) {
+      // Pullback/Long setup
       entry   = lastClose - atr * 0.2;
       tp1     = Math.min(entry + atr * 2.0, resistance);
       tp2     = entry + atr * 3.5;
       tp3     = entry + atr * 5.5;
       stopLoss = entry - atr * 1.5;
     } else {
+      // Breakout/Short setup
       entry   = lastClose + atr * 0.2;
       tp1     = Math.max(entry - atr * 2.0, support);
       tp2     = entry - atr * 3.5;
@@ -374,7 +375,7 @@ async function analyseSymbol(symbol, interval = "1h") {
 // ══════════════════════════════════════════════════════════════════════════════
 
 // Top pairs to scan — high liquidity coins most traders use
-const SCAN_PAIRS = [
+export const SCAN_PAIRS = [
   "BTCUSDT","ETHUSDT","BNBUSDT","SOLUSDT","XRPUSDT",
   "DOGEUSDT","ADAUSDT","AVAXUSDT","LINKUSDT","DOTUSDT",
   "MATICUSDT","LTCUSDT","TRXUSDT","ATOMUSDT","NEARUSDT",
@@ -384,6 +385,35 @@ const SCAN_PAIRS = [
   "MANAUSDT","GRTUSDT","AXSUSDT","AAVEUSDT","UNIUSDT",
   "SHIBUSDT","PEPEUSDT","FLOKIUSDT","1000BONKUSDT","WIFUSDT"
 ];
+
+// Dynamically fetch top 560 USDT pairs by 24h quote volume
+export async function fetchScanPairs() {
+  try {
+    const res = await fetch("https://api.binance.com/api/v3/ticker/24hr");
+    if (!res.ok) throw new Error("Failed to fetch Binance 24hr tickers");
+    const data = await res.json();
+    
+    // Filter to USDT pairs only, ignore leverage / down tokens
+    const usdtPairs = data
+      .filter(d => 
+        d.symbol.endsWith("USDT") && 
+        !d.symbol.includes("UP") && 
+        !d.symbol.includes("DOWN") && 
+        !d.symbol.includes("BULL") && 
+        !d.symbol.includes("BEAR")
+      )
+      .sort((a, b) => parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume));
+    
+    const symbols = usdtPairs.slice(0, 560).map(d => d.symbol);
+    window.allBinanceUsdtPairs = symbols; // Save globally for search autocompletion
+    console.log(`[TA Engine] Fetched ${symbols.length} USDT symbols dynamically.`);
+    return symbols;
+  } catch (err) {
+    console.warn("[TA Engine] Error fetching symbols dynamically, using fallback SCAN_PAIRS list:", err);
+    window.allBinanceUsdtPairs = SCAN_PAIRS;
+    return SCAN_PAIRS;
+  }
+}
 
 // Cache with 15-min expiry to avoid hammering API
 let taCache = null;
@@ -396,21 +426,55 @@ async function scanMarket() {
     return taCache;
   }
 
-  console.log("[TA Engine] Starting market scan...");
+  console.log("[TA Engine] Starting market scan of 550+ cryptocurrencies...");
 
-  // Scan pairs with slight delay between requests to avoid rate limits
+  // Load scan pairs dynamically
+  const scanPairs = await fetchScanPairs();
+
+  // Run scans with a concurrency limit of 12 parallel requests
   const results = [];
-  for (let i = 0; i < SCAN_PAIRS.length; i++) {
-    const signal = await analyseSymbol(SCAN_PAIRS[i], "1h");
-    if (signal) results.push(signal);
-    // Small throttle every 5 requests
-    if (i % 5 === 4) await new Promise(r => setTimeout(r, 200));
+  let currentIndex = 0;
+  const concurrencyLimit = 12;
+
+  // Set initial scan progress state
+  if (typeof window.onScanProgress === "function") {
+    window.onScanProgress(0, scanPairs.length, 0);
   }
+
+  async function worker() {
+    while (currentIndex < scanPairs.length) {
+      const index = currentIndex++;
+      const symbol = scanPairs[index];
+      
+      try {
+        const signal = await analyseSymbol(symbol, "1h");
+        if (signal) {
+          results.push(signal);
+        }
+      } catch (err) {
+        console.error(`Error scanning symbol ${symbol}:`, err);
+      }
+      
+      if (typeof window.onScanProgress === "function") {
+        window.onScanProgress(currentIndex, scanPairs.length, results.length);
+      }
+
+      // Small throttle to prevent slamming the network thread
+      await new Promise(r => setTimeout(r, 40));
+    }
+  }
+
+  // Launch workers
+  const workers = Array(Math.min(concurrencyLimit, scanPairs.length))
+    .fill(null)
+    .map(() => worker());
+
+  await Promise.all(workers);
 
   // Sort by confluence score (strongest signals first)
   results.sort((a, b) => b.confluenceScore - a.confluenceScore);
 
-  console.log(`[TA Engine] Scan complete. Found ${results.length} valid signals.`);
+  console.log(`[TA Engine] Scan complete. Found ${results.length} valid signals out of ${scanPairs.length} scanned.`);
 
   // Mark the top 2 as free signals, rest as VIP
   const tagged = results.map((sig, idx) => ({

@@ -10,7 +10,8 @@ import {
   subscribeToSignals, 
   createSignal, 
   updateSignalStatus, 
-  deleteSignal 
+  deleteSignal,
+  analyseSymbol
 } from "./signals.js";
 import { 
   subscribeToTrades, 
@@ -562,46 +563,302 @@ function initFormListeners() {
 }
 
 // Signals Page Logic
+let signalsPageState = {
+  allSignals: [],
+  searchQuery: "",
+  directionFilter: "all",
+  tierFilter: "all",
+  statusFilter: "all",
+  sortBy: "confluence",
+  currentPage: 1,
+  pageSize: 12,
+  onDemandSignal: null,
+  onDemandScanning: false,
+  onDemandSymbol: ""
+};
+
 function loadSignalsPage() {
   const container = document.getElementById("signals-list");
+  if (!container) return;
+  
   container.innerHTML = `<div class="loading-spinner">Loading Crypto Signals...</div>`;
 
   const status = state.profile?.role === "admin" ? "admin" : state.profile?.premiumStatus || "free";
 
+  // Setup Scanner Status Bar hook
+  const progressContainer = document.getElementById("scanner-progress-container");
+  const progressText = document.getElementById("scanner-progress-text");
+  const progressFill = document.getElementById("scanner-progress-fill");
+  const progressDetail = document.getElementById("scanner-status-detail");
+  const progressSignalsFound = document.getElementById("scanner-signals-found");
+
+  window.onScanProgress = (current, total, signalsFound) => {
+    if (progressContainer) {
+      progressContainer.classList.remove("hidden");
+    }
+    const pct = Math.round((current / total) * 100);
+    if (progressText) progressText.textContent = `${current}/${total} Coins`;
+    if (progressFill) progressFill.style.width = `${pct}%`;
+    if (progressDetail) progressDetail.textContent = `Analyzing indicators for confluence setups... (${pct}%)`;
+    if (progressSignalsFound) progressSignalsFound.textContent = `${signalsFound} active setups discovered`;
+
+    if (current === total) {
+      if (progressDetail) progressDetail.textContent = "Market scan complete!";
+      setTimeout(() => {
+        if (progressContainer) progressContainer.classList.add("hidden");
+      }, 3000);
+    }
+  };
+
+  // Wire up filter controls (once)
+  const searchInput = document.getElementById("signals-search");
+  const directionFilter = document.getElementById("signals-direction-filter");
+  const tierFilter = document.getElementById("signals-tier-filter");
+  const statusFilter = document.getElementById("signals-status-filter");
+  const sortBySelect = document.getElementById("signals-sort-by");
+
+  if (searchInput && !searchInput.dataset.listenerWired) {
+    searchInput.dataset.listenerWired = "true";
+    searchInput.addEventListener("input", (e) => {
+      signalsPageState.searchQuery = e.target.value;
+      signalsPageState.currentPage = 1; // Reset to page 1 on search
+      signalsPageState.onDemandSignal = null; // Clear old dynamic scan on query change
+      signalsPageState.onDemandSymbol = "";
+      renderFilteredSignals();
+    });
+  }
+
+  if (directionFilter && !directionFilter.dataset.listenerWired) {
+    directionFilter.dataset.listenerWired = "true";
+    directionFilter.addEventListener("change", (e) => {
+      signalsPageState.directionFilter = e.target.value;
+      signalsPageState.currentPage = 1;
+      renderFilteredSignals();
+    });
+  }
+
+  if (tierFilter && !tierFilter.dataset.listenerWired) {
+    tierFilter.dataset.listenerWired = "true";
+    tierFilter.addEventListener("change", (e) => {
+      signalsPageState.tierFilter = e.target.value;
+      signalsPageState.currentPage = 1;
+      renderFilteredSignals();
+    });
+  }
+
+  if (statusFilter && !statusFilter.dataset.listenerWired) {
+    statusFilter.dataset.listenerWired = "true";
+    statusFilter.addEventListener("change", (e) => {
+      signalsPageState.statusFilter = e.target.value;
+      signalsPageState.currentPage = 1;
+      renderFilteredSignals();
+    });
+  }
+
+  if (sortBySelect && !sortBySelect.dataset.listenerWired) {
+    sortBySelect.dataset.listenerWired = "true";
+    sortBySelect.addEventListener("change", (e) => {
+      signalsPageState.sortBy = e.target.value;
+      renderFilteredSignals();
+    });
+  }
+
   activeUnsubscribes.signals = subscribeToSignals(status, (signals) => {
-    container.innerHTML = "";
-    if (signals.length === 0) {
-      container.innerHTML = `<div class="empty-state">No trading signals active at the moment. Check back soon.</div>`;
-      return;
+    signalsPageState.allSignals = signals;
+    renderFilteredSignals();
+  });
+}
+
+function renderFilteredSignals() {
+  const container = document.getElementById("signals-list");
+  const paginationContainer = document.getElementById("signals-pagination");
+  if (!container) return;
+
+  let filtered = [...signalsPageState.allSignals];
+
+  // 1. Filter by Search Query (coin name)
+  const q = signalsPageState.searchQuery.trim().toLowerCase();
+  if (q) {
+    filtered = filtered.filter(sig => 
+      sig.pair.toLowerCase().includes(q) || 
+      sig.symbol?.toLowerCase().includes(q)
+    );
+  }
+
+  // 2. Filter by Direction
+  if (signalsPageState.directionFilter !== "all") {
+    filtered = filtered.filter(sig => 
+      sig.direction.toLowerCase() === signalsPageState.directionFilter
+    );
+  }
+
+  // 3. Filter by Tier
+  if (signalsPageState.tierFilter !== "all") {
+    filtered = filtered.filter(sig => 
+      sig.tier?.toLowerCase() === signalsPageState.tierFilter
+    );
+  }
+
+  // 4. Filter by Status
+  if (signalsPageState.statusFilter !== "all") {
+    filtered = filtered.filter(sig => 
+      sig.status?.toLowerCase() === signalsPageState.statusFilter
+    );
+  }
+
+  // 5. Apply Sorting
+  if (signalsPageState.sortBy === "confluence") {
+    filtered.sort((a, b) => (b.confluenceScore || 0) - (a.confluenceScore || 0));
+  } else if (signalsPageState.sortBy === "accuracy") {
+    filtered.sort((a, b) => parseFloat(b.accuracy || 0) - parseFloat(a.accuracy || 0));
+  } else if (signalsPageState.sortBy === "newest") {
+    filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  // 6. Handle dynamic on-demand dynamic scanning if no signal matches search query
+  if (filtered.length === 0 && q.length >= 2) {
+    const cleanQ = q.toUpperCase().replace("/", "");
+    // Find matching symbol in the 550+ global list
+    const matchedSymbol = window.allBinanceUsdtPairs?.find(sym => 
+      sym === cleanQ || 
+      sym === cleanQ + "USDT" || 
+      sym.replace("USDT", "") === cleanQ
+    );
+
+    if (matchedSymbol) {
+      if (signalsPageState.onDemandSymbol !== matchedSymbol) {
+        // Trigger scan!
+        signalsPageState.onDemandSymbol = matchedSymbol;
+        signalsPageState.onDemandScanning = true;
+        signalsPageState.onDemandSignal = null;
+        
+        container.innerHTML = `
+          <div class="empty-state" style="grid-column: 1 / -1; padding: 40px; text-align: center;">
+            <div class="loading-spinner" style="margin-bottom: 15px; border-top-color: var(--color-primary);"></div>
+            <p style="font-weight: 700; color: #fff;">Running real-time TA analysis for ${matchedSymbol}...</p>
+            <p class="text-gray" style="font-size:0.85rem; margin-top:5px;">Checking RSI, MACD, EMA alignments, and Bollinger Bands across 150 candles.</p>
+          </div>
+        `;
+        
+        analyseSymbol(matchedSymbol, "1h", true).then(result => {
+          signalsPageState.onDemandScanning = false;
+          if (result) {
+            signalsPageState.onDemandSignal = result;
+          } else {
+            signalsPageState.onDemandSignal = "failed";
+          }
+          renderFilteredSignals();
+        }).catch(err => {
+          console.error("On-demand scan failed:", err);
+          signalsPageState.onDemandScanning = false;
+          signalsPageState.onDemandSignal = "failed";
+          renderFilteredSignals();
+        });
+        return;
+      }
+    }
+  }
+
+  // Clear grid
+  container.innerHTML = "";
+
+  // Render on-demand card if available
+  let displayList = [...filtered];
+  if (signalsPageState.onDemandSignal && signalsPageState.onDemandSignal !== "failed" && signalsPageState.onDemandSignal !== "scanning") {
+    displayList.unshift(signalsPageState.onDemandSignal);
+  }
+
+  if (displayList.length === 0) {
+    container.innerHTML = `<div class="empty-state" style="grid-column: 1 / -1;">No setups match your filters. Try searching for a different symbol.</div>`;
+    if (paginationContainer) paginationContainer.innerHTML = "";
+    return;
+  }
+
+  // 7. Apply Pagination
+  const totalItems = displayList.length;
+  const totalPages = Math.ceil(totalItems / signalsPageState.pageSize);
+  const startIdx = (signalsPageState.currentPage - 1) * signalsPageState.pageSize;
+  const endIdx = startIdx + signalsPageState.pageSize;
+  const paginatedList = displayList.slice(startIdx, endIdx);
+
+  // Render Signals Grid
+  paginatedList.forEach((sig) => {
+    const card = document.createElement("div");
+    
+    let cardClass = "signal-card";
+    let sideBadgeClass = "badge-neutral";
+    let statusClass = "status-pending";
+
+    if (sig.direction.toLowerCase() === "buy") {
+      cardClass += " card-buy";
+      sideBadgeClass = "badge-buy";
+    } else if (sig.direction.toLowerCase() === "sell") {
+      cardClass += " card-sell";
+      sideBadgeClass = "badge-sell";
+    } else {
+      cardClass += " card-neutral";
+      sideBadgeClass = "badge-neutral";
     }
 
-    signals.forEach((sig) => {
-      const card = document.createElement("div");
-      card.className = `signal-card ${sig.direction.toLowerCase() === "buy" ? "card-buy" : "card-sell"}`;
+    if (sig.status === "Win") {
+      statusClass = "status-win";
+    } else if (sig.status === "Loss") {
+      statusClass = "status-loss";
+    } else if (sig.direction === "NEUTRAL") {
+      statusClass = "status-neutral";
+    }
 
-      const badgeClass = sig.status === "Win" ? "status-win" : sig.status === "Loss" ? "status-loss" : "status-pending";
-      const targetsList = sig.targets.map((t, idx) => `<li>Target ${idx + 1}: <span class="text-white font-medium">${t}</span></li>`).join("");
-
-      // Extra meta badges for unlocked signals (leverage, rrr, rsi, confluence, accuracy)
-      const metaBadges = !sig.locked ? `
+    const targetsList = sig.targets.map((t, idx) => `<li>Target ${idx + 1}: <span class="text-white font-medium">${t}</span></li>`).join("");
+    const isLocked = sig.locked;
+    
+    let html = "";
+    if (isLocked) {
+      card.className = "signal-card locked-card";
+      html = `
+        <div class="lock-overlay">
+          <svg class="lock-icon" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2V7a5 5 0 00-5-5zM7 7a3 3 0 016 0v2H7V7z"></path></svg>
+          <h4 class="lock-title">VIP Premium Signal – ${sig.pair}</h4>
+          <p class="lock-desc">Real TA-Verified VIP signal with up to 98% accuracy. Upgrade to unlock all signals + auto-bot.</p>
+          <a href="#account" class="btn btn-primary btn-sm">Unlock with Premium</a>
+        </div>
+        <div class="signal-header blurred">
+          <div>
+            <h3 class="signal-pair">${sig.pair}</h3>
+            <span class="signal-direction">${sig.direction}</span>
+            <span class="signal-timeframe">${sig.timeframe}</span>
+          </div>
+          <span class="signal-status-badge">🔒 VIP</span>
+        </div>
+        <div class="signal-body blurred">
+          <div class="signal-detail"><span>Entry Target</span><strong>•••</strong></div>
+          <div class="signal-detail"><span>Stop Loss</span><strong>•••</strong></div>
+        </div>
+      `;
+    } else {
+      card.className = cardClass;
+      
+      const leverageLabel = sig.direction === "NEUTRAL" ? "Dynamic" : `${sig.leverage || "10x"}`;
+      const statusLabel = sig.direction === "NEUTRAL" ? "Monitoring" : `${sig.status || "Pending"}`;
+      
+      const metaBadges = `
         <div class="signal-meta-row">
-          ${sig.leverage ? `<span class="meta-badge leverage-badge">⚡ ${sig.leverage} Leverage</span>` : ""}
+          <span class="meta-badge leverage-badge">⚡ ${leverageLabel}</span>
           ${sig.rrr ? `<span class="meta-badge rrr-badge">🔢 R:R ${sig.rrr}</span>` : ""}
           ${sig.rsi ? `<span class="meta-badge rsi-badge">📊 RSI ${sig.rsi}</span>` : ""}
-          ${sig.confluenceScore ? `<span class="meta-badge confluence-badge">✨ Confluence ${sig.confluenceScore}</span>` : ""}
+          ${sig.confluenceScore !== undefined ? `<span class="meta-badge confluence-badge">✨ Confluence ${sig.confluenceScore}</span>` : ""}
           ${sig.accuracy ? `<span class="meta-badge accuracy-badge">🎯 ${sig.accuracy} Acc</span>` : ""}
-          ${sig.tier === "free" ? `<span class="meta-badge free-badge">FREE Signal</span>` : `<span class="meta-badge vip-badge">⭐ VIP</span>`}
+          ${sig.direction === "NEUTRAL" ? `<span class="meta-badge free-badge" style="border-color: rgba(255,255,255,0.1); color:#ffaa00;">DYNAMIC SCAN</span>` : (sig.tier === "free" ? `<span class="meta-badge free-badge">FREE Signal</span>` : `<span class="meta-badge vip-badge">⭐ VIP</span>`)}
         </div>
-      ` : "";
+      `;
 
-      let html = `
+      html = `
         <div class="signal-header">
           <div>
             <h3 class="signal-pair">${sig.pair}</h3>
-            <span class="signal-direction badge-${sig.direction.toLowerCase()}">${sig.direction}</span>
+            <span class="signal-direction ${sideBadgeClass}">${sig.direction}</span>
             <span class="signal-timeframe">${sig.timeframe}</span>
           </div>
-          <span class="signal-status-badge ${badgeClass}">${sig.status}</span>
+          <span class="signal-status-badge ${statusClass}">${statusLabel}</span>
         </div>
         <div class="signal-body">
           <div class="signal-detail">
@@ -623,35 +880,53 @@ function loadSignalsPage() {
         </div>
         ${metaBadges}
       `;
+    }
 
-      if (sig.locked) {
-        card.classList.add("locked-card");
-        html = `
-          <div class="lock-overlay">
-            <svg class="lock-icon" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2V7a5 5 0 00-5-5zM7 7a3 3 0 016 0v2H7V7z"></path></svg>
-            <h4 class="lock-title">VIP Premium Signal – ${sig.pair}</h4>
-            <p class="lock-desc">Real TA-Verified VIP signal with up to 98% accuracy. Upgrade to unlock all signals + auto-bot.</p>
-            <a href="#account" class="btn btn-primary btn-sm">Unlock with Premium</a>
-          </div>
-          <div class="signal-header blurred">
-            <div>
-              <h3 class="signal-pair">${sig.pair}</h3>
-              <span class="signal-direction">${sig.direction}</span>
-              <span class="signal-timeframe">${sig.timeframe}</span>
-            </div>
-            <span class="signal-status-badge">🔒 VIP</span>
-          </div>
-          <div class="signal-body blurred">
-            <div class="signal-detail"><span>Entry Target</span><strong>•••</strong></div>
-            <div class="signal-detail"><span>Stop Loss</span><strong>•••</strong></div>
-          </div>
-        `;
+    card.innerHTML = html;
+    container.appendChild(card);
+  });
+
+  // Render Pagination Buttons
+  if (paginationContainer) {
+    if (totalPages <= 1) {
+      paginationContainer.innerHTML = "";
+    } else {
+      paginationContainer.innerHTML = `
+        <button class="pagination-btn" id="pagination-prev" ${signalsPageState.currentPage === 1 ? "disabled" : ""}>
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+          Previous
+        </button>
+        <span class="pagination-info">Page ${signalsPageState.currentPage} of ${totalPages}</span>
+        <button class="pagination-btn" id="pagination-next" ${signalsPageState.currentPage === totalPages ? "disabled" : ""}>
+          Next
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      `;
+
+      const prevBtn = document.getElementById("pagination-prev");
+      const nextBtn = document.getElementById("pagination-next");
+
+      if (prevBtn) {
+        prevBtn.addEventListener("click", () => {
+          if (signalsPageState.currentPage > 1) {
+            signalsPageState.currentPage--;
+            renderFilteredSignals();
+            container.scrollIntoView({ behavior: "smooth" });
+          }
+        });
       }
 
-      card.innerHTML = html;
-      container.appendChild(card);
-    });
-  });
+      if (nextBtn) {
+        nextBtn.addEventListener("click", () => {
+          if (signalsPageState.currentPage < totalPages) {
+            signalsPageState.currentPage++;
+            renderFilteredSignals();
+            container.scrollIntoView({ behavior: "smooth" });
+          }
+        });
+      }
+    }
+  }
 }
 
 

@@ -1838,3 +1838,86 @@ input:checked + .slider:before {
   color: var(--color-primary);
   box-shadow: 0 0 8px rgba(243, 186, 47, 0.1);
 }
+
+/* Custom Styles for Advanced Scanner Search, Filters, and Pagination */
+.filter-search-bar input::placeholder {
+  color: var(--text-muted);
+}
+.filter-search-bar select {
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a0a0a0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 14px;
+  padding-right: 36px !important;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.filter-search-bar select:focus,
+.filter-search-bar input:focus {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 12px rgba(243, 186, 47, 0.2) !important;
+  outline: none;
+}
+
+/* Pagination container and buttons */
+.pagination-container {
+  user-select: none;
+}
+.pagination-btn {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  color: #fff;
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.pagination-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+}
+.pagination-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.pagination-info {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* Scanner progress animation */
+@keyframes scannerPulse {
+  0% { transform: scale(0.95); opacity: 0.6; }
+  50% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0.6; }
+}
+.ticker-live-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+/* Single-coin dynamic setup card classes */
+.card-neutral {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+.card-neutral::after {
+  background: rgba(255, 255, 255, 0.15) !important;
+}
+.badge-neutral {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+}
+.status-neutral {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted);
+}
+
