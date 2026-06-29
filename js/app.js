@@ -549,7 +549,7 @@ function initFormListeners() {
         });
 
         // Step 3: Update local state and UI
-        state.profile.premiumStatus = "pending";
+        if (state.profile) state.profile.premiumStatus = "pending";
         updatePlanBadge("pending");
 
         msgEl.className = "status-message text-green";

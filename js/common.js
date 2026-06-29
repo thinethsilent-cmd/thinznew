@@ -345,7 +345,7 @@ export function initFormListeners() {
         });
 
         // Step 3: Update UI
-        state.profile.premiumStatus = 'pending';
+        if (state.profile) state.profile.premiumStatus = 'pending';
         updatePlanBadge('pending');
         msgEl.className = 'status-message text-green';
         msgEl.textContent = '✅ Request submitted! Admin will verify your payment and activate your account shortly.';
