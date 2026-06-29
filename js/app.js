@@ -27,7 +27,7 @@ import {
 } from "./admin.js";
 import { db, storage } from "./firebase-config.js";
 import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-storage.js";
-import { doc, updateDoc } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+import { doc, updateDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
 // Global App State
 let state = {
@@ -63,6 +63,15 @@ const premiumBadge = document.getElementById("nav-premium-badge");
 
 // App Initialization
 document.addEventListener("DOMContentLoaded", () => {
+  // Check URL for referral code
+  const urlParams = new URLSearchParams(window.location.search);
+  const refCode = urlParams.get("ref");
+  if (refCode) {
+    localStorage.setItem("referred_by", refCode.trim());
+    // Clean up URL parameter to make it look clean
+    window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
+  }
+
   initRouter();
   initAuthListeners();
   initFormListeners();
@@ -264,7 +273,9 @@ function initFormListeners() {
       try {
         errorEl.textContent = "";
         showLoading(true);
-        await signUp(email, pass, name);
+        const referredBy = localStorage.getItem("referred_by");
+        await signUp(email, pass, name, referredBy);
+        localStorage.removeItem("referred_by");
         window.location.hash = "#signals";
       } catch (err) {
         errorEl.textContent = err.message;
@@ -322,7 +333,9 @@ function initFormListeners() {
         if (loginError) loginError.textContent = "";
         if (signupError) signupError.textContent = "";
         showLoading(true);
-        const { userData } = await signInWithGoogle();
+        const referredBy = localStorage.getItem("referred_by");
+        const { userData } = await signInWithGoogle(referredBy);
+        localStorage.removeItem("referred_by");
         if (userData && userData.role === "admin") {
           window.location.hash = "#admin";
         } else {
@@ -1143,6 +1156,119 @@ function loadAccountPage() {
       const expiredBanner = document.getElementById("expired-notice-banner");
       if (expiredBanner) expiredBanner.classList.remove("hidden");
     }
+  }
+
+  // Populate referral UI elements
+  const refLinkInput = document.getElementById("referral-link-input");
+  if (refLinkInput && state.user) {
+    refLinkInput.value = `${window.location.origin}${window.location.pathname}?ref=${state.user.uid}`;
+  }
+
+  // Setup Clipboard Copy listener
+  const copyBtn = document.getElementById("btn-copy-ref");
+  const copyMsg = document.getElementById("copy-ref-msg");
+  if (copyBtn && !copyBtn.dataset.listenerWired) {
+    copyBtn.dataset.listenerWired = "true";
+    copyBtn.addEventListener("click", () => {
+      if (refLinkInput) {
+        refLinkInput.select();
+        navigator.clipboard.writeText(refLinkInput.value)
+          .then(() => {
+            copyBtn.textContent = "Copied!";
+            if (copyMsg) copyMsg.textContent = "Referral link copied to clipboard!";
+            setTimeout(() => {
+              copyBtn.innerHTML = `
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right: 6px;">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path>
+                </svg>Copy Link`;
+              if (copyMsg) copyMsg.textContent = "";
+            }, 2000);
+          })
+          .catch(err => {
+            console.error("Failed to copy referral link:", err);
+          });
+      }
+    });
+  }
+
+  // Helper function to mask name/email for privacy
+  const maskNameOrEmail = (str) => {
+    if (!str) return "User";
+    if (str.includes("@")) {
+      const [local, domain] = str.split("@");
+      if (local.length <= 3) return `${local[0]}***@${domain}`;
+      return `${local.slice(0, 3)}***@${domain}`;
+    }
+    if (str.length <= 3) return str;
+    return `${str.slice(0, 2)}***${str.slice(-1)}`;
+  };
+
+  // Fetch referrals from Firestore
+  const historyList = document.getElementById("referral-history-list");
+  if (historyList && state.user) {
+    historyList.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-gray">Loading referrals...</td></tr>`;
+    
+    const referralsQuery = query(collection(db, "users"), where("referredBy", "==", state.user.uid));
+    getDocs(referralsQuery)
+      .then(snapshot => {
+        historyList.innerHTML = "";
+        let invitedCount = snapshot.size;
+        let successfulCount = 0;
+
+        if (invitedCount === 0) {
+          historyList.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-gray">No referrals yet. Share your link to start earning!</td></tr>`;
+        } else {
+          snapshot.forEach(docSnap => {
+            const u = docSnap.data();
+            const isProcessed = u.referralBonusProcessed || false;
+            if (isProcessed) {
+              successfulCount++;
+            }
+
+            const nameDisplay = maskNameOrEmail(u.displayName || u.email);
+            const joinedDate = u.createdAt ? new Date(u.createdAt).toLocaleDateString("en-GB") : "—";
+            
+            // Status badges
+            let statusLabel = "Registered (Free)";
+            let badgeClass = "badge-free";
+            if (u.premiumStatus === "paid") {
+              statusLabel = "VIP Premium Active";
+              badgeClass = "badge-vip";
+            } else if (u.premiumStatus === "pending") {
+              statusLabel = "Pending VIP";
+              badgeClass = "badge-pending";
+            } else if (u.premiumStatus === "expired") {
+              statusLabel = "VIP Expired";
+              badgeClass = "badge-expired";
+            }
+
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+              <td class="py-3 px-4 text-white font-medium">${nameDisplay}</td>
+              <td class="py-3 px-4 text-gray">${joinedDate}</td>
+              <td class="py-3 px-4"><span class="badge-${badgeClass}">${statusLabel}</span></td>
+              <td class="py-3 px-4 ${isProcessed ? 'text-green font-medium' : 'text-gray'}">${isProcessed ? '✅ 3 Days VIP' : '—'}</td>
+            `;
+            historyList.appendChild(tr);
+          });
+        }
+
+        // Update stats counters
+        const totalEl = document.getElementById("ref-count-total");
+        const successfulEl = document.getElementById("ref-count-successful");
+        const daysEl = document.getElementById("ref-days-earned");
+
+        if (totalEl) totalEl.textContent = invitedCount;
+        if (successfulEl) successfulEl.textContent = successfulCount;
+        if (daysEl) {
+          const days = state.profile?.vipDaysEarned || (successfulCount * 3);
+          daysEl.textContent = `${days} Day${days === 1 ? "" : "s"}`;
+        }
+      })
+      .catch(err => {
+        console.error("Error loading referrals list:", err);
+        historyList.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-red">Error loading referrals list.</td></tr>`;
+      });
   }
 }
 

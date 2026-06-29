@@ -38,7 +38,7 @@ export async function getUserDoc(uid) {
 }
 
 // Sign up function
-export async function signUp(email, password, displayName) {
+export async function signUp(email, password, displayName, referredBy = null) {
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
@@ -57,7 +57,8 @@ export async function signUp(email, password, displayName) {
       role: role,
       premiumStatus: "free",
       winLoss: { wins: 0, losses: 0 },
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      ...(referredBy && { referredBy })
     };
 
     try {
@@ -106,7 +107,7 @@ export async function signOutUser() {
 }
 
 // Sign in with Google function
-export async function signInWithGoogle() {
+export async function signInWithGoogle(referredBy = null) {
   const provider = new GoogleAuthProvider();
   try {
     const result = await signInWithPopup(auth, provider);
@@ -133,7 +134,8 @@ export async function signInWithGoogle() {
         role: role,
         premiumStatus: "free",
         winLoss: { wins: 0, losses: 0 },
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        ...(referredBy && { referredBy })
       };
       
       try {

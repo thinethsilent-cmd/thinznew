@@ -5,7 +5,8 @@ import {
   query, 
   doc, 
   updateDoc,
-  getDocs
+  getDocs,
+  getDoc
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
 // Calculate expiry date based on plan name
@@ -48,6 +49,61 @@ export async function approvePremium(userId, planName = "1 Month") {
       premiumActivatedAt: new Date().toISOString(),
       premiumExpiresAt: expiresAt  // null = Lifetime (never expires)
     };
+
+    // Check for referral bonus
+    try {
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        const userData = userSnap.data();
+        if (userData.referredBy && !userData.referralBonusProcessed) {
+          const referrerId = userData.referredBy;
+          const referrerRef = doc(db, "users", referrerId);
+          const referrerSnap = await getDoc(referrerRef);
+          if (referrerSnap.exists()) {
+            const referrerData = referrerSnap.data();
+            
+            let newStatus = "paid";
+            let newExpiresAt = null;
+            let activePlan = "Referral Bonus (3 Days)";
+            
+            const now = new Date();
+            if (referrerData.premiumStatus === "paid" && referrerData.premiumExpiresAt) {
+              // Existing non-lifetime subscription - extend by 3 days
+              const currentExpiry = new Date(referrerData.premiumExpiresAt);
+              const baseDate = currentExpiry > now ? currentExpiry : now;
+              baseDate.setDate(baseDate.getDate() + 3);
+              newExpiresAt = baseDate.toISOString();
+              activePlan = referrerData.activePlan || "VIP Premium";
+            } else if (referrerData.premiumStatus === "paid" && !referrerData.premiumExpiresAt) {
+              // Existing lifetime subscription - keep as lifetime
+              newStatus = "paid";
+              newExpiresAt = null;
+              activePlan = referrerData.activePlan || "Lifetime";
+            } else {
+              // Free/expired/pending user - grant 3 days VIP
+              now.setDate(now.getDate() + 3);
+              newExpiresAt = now.toISOString();
+            }
+
+            const referrerUpdates = {
+              premiumStatus: newStatus,
+              activePlan: activePlan,
+              premiumExpiresAt: newExpiresAt,
+              successfulReferrals: (referrerData.successfulReferrals || 0) + 1,
+              vipDaysEarned: (referrerData.vipDaysEarned || 0) + 3
+            };
+            await updateDoc(referrerRef, referrerUpdates);
+            console.log(`Referrer ${referrerId} rewarded with 3 days VIP. Expire: ${newExpiresAt}`);
+            
+            // Mark referral bonus as processed
+            updateData.referralBonusProcessed = true;
+          }
+        }
+      }
+    } catch (refErr) {
+      console.error("Error processing referral bonus in approvePremium:", refErr);
+    }
+
     await updateDoc(userRef, updateData);
     console.log(`User ${userId} approved: Plan "${planName}", expires: ${expiresAt || "Never"}`);
   } catch (error) {

@@ -8,10 +8,10 @@
   --bg-card-hover: rgba(27, 36, 62, 0.8);
   --bg-input: #0f1422;
   --border-color: rgba(255, 255, 255, 0.08);
-  --border-focus: rgba(243, 186, 47, 0.4);
+  --border-focus: rgba(46, 196, 160, 0.4);
   
-  --color-primary: #f3ba2f; /* Binance Gold */
-  --color-primary-hover: #e5ac1f;
+  --color-primary: #2ec4a0; /* Thineth Bandara Teal */
+  --color-primary-hover: #25a889;
   --color-buy: #00ff88; /* Neon Green */
   --color-sell: #ff3366; /* Neon Red */
   
@@ -19,7 +19,7 @@
   --text-secondary: #8a96ad;
   --text-muted: #4e5b73;
   
-  --glow-gold: 0 0 15px rgba(243, 186, 47, 0.35);
+  --glow-gold: 0 0 15px rgba(46, 196, 160, 0.35);
   --glow-green: 0 0 15px rgba(0, 255, 136, 0.35);
   --glow-red: 0 0 15px rgba(255, 51, 102, 0.35);
   
