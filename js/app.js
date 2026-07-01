@@ -795,7 +795,7 @@ function renderFilteredSignals() {
   const paginatedList = displayList.slice(startIdx, endIdx);
 
   // Render Signals Grid
-  paginatedList.forEach((sig) => {
+  paginatedList.forEach((sig, renderIdx) => {
     const card = document.createElement("div");
     
     let cardClass = "signal-card";
@@ -824,31 +824,51 @@ function renderFilteredSignals() {
     const targetsList = sig.targets.map((t, idx) => `<li>Target ${idx + 1}: <span class="text-white font-medium">${t}</span></li>`).join("");
     const isLocked = sig.locked;
     
+    // Generate TradingView chart link for the pair
+    const tvSymbol = sig.symbol ? sig.symbol.replace("USDT", "") + "USDT" : sig.pair.replace("/", "");
+    const tvLink = `https://www.tradingview.com/chart/?symbol=BINANCE:${tvSymbol}`;
+
+    // Time ago formatting
+    const timeAgo = sig.createdAt ? (() => {
+      const diff = Date.now() - new Date(sig.createdAt).getTime();
+      const m = Math.floor(diff / 60000);
+      const h = Math.floor(m / 60);
+      if (h > 0) return `${h}h ago`;
+      if (m > 0) return `${m}m ago`;
+      return 'Just now';
+    })() : '';
+    
     let html = "";
     if (isLocked) {
       card.className = "signal-card locked-card";
       html = `
-        <div class="lock-overlay">
-          <svg class="lock-icon" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2V7a5 5 0 00-5-5zM7 7a3 3 0 016 0v2H7V7z"></path></svg>
-          <h4 class="lock-title">VIP Premium Signal – ${sig.pair}</h4>
-          <p class="lock-desc">Real TA-Verified VIP signal with up to 98% accuracy. Upgrade to unlock all signals + auto-bot.</p>
-          <a href="#account" class="btn btn-primary btn-sm">Unlock with Premium</a>
-        </div>
-        <div class="signal-header blurred">
-          <div>
-            <h3 class="signal-pair">${sig.pair}</h3>
-            <span class="signal-direction">${sig.direction}</span>
-            <span class="signal-timeframe">${sig.timeframe}</span>
+        <div class="signal-card-top-bar"></div>
+        <div class="signal-card-inner">
+          <div class="lock-overlay">
+            <svg class="lock-icon" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2V7a5 5 0 00-5-5zM7 7a3 3 0 016 0v2H7V7z"></path></svg>
+            <h4 class="lock-title">VIP Premium Signal – ${sig.pair}</h4>
+            <p class="lock-desc">TA-Verified signal with up to 98% accuracy. Upgrade to unlock all signals + auto-bot.</p>
+            <a href="#account" class="btn btn-primary btn-sm">Unlock with Premium</a>
           </div>
-          <span class="signal-status-badge">🔒 VIP</span>
-        </div>
-        <div class="signal-body blurred">
-          <div class="signal-detail"><span>Entry Target</span><strong>•••</strong></div>
-          <div class="signal-detail"><span>Stop Loss</span><strong>•••</strong></div>
+          <div class="signal-header blurred">
+            <div>
+              <h3 class="signal-pair">${sig.pair}</h3>
+              <div class="signal-pair-sub">
+                <span class="signal-direction">${sig.direction}</span>
+                <span class="signal-timeframe">${sig.timeframe || '1H'}</span>
+              </div>
+            </div>
+            <span class="signal-status-badge">🔒 VIP</span>
+          </div>
+          <div class="signal-body blurred">
+            <div class="signal-detail"><span>Entry Target</span><strong>•••</strong></div>
+            <div class="signal-detail"><span>Stop Loss</span><strong>•••</strong></div>
+          </div>
         </div>
       `;
     } else {
       card.className = cardClass;
+      card.style.animationDelay = `${renderIdx * 0.06}s`;
       
       const leverageLabel = sig.direction === "NEUTRAL" ? "Dynamic" : `${sig.leverage || "10x"}`;
       const statusLabel = sig.direction === "NEUTRAL" ? "Monitoring" : `${sig.status || "Pending"}`;
@@ -856,42 +876,56 @@ function renderFilteredSignals() {
       const metaBadges = `
         <div class="signal-meta-row">
           <span class="meta-badge leverage-badge">⚡ ${leverageLabel}</span>
-          ${sig.rrr ? `<span class="meta-badge rrr-badge">🔢 R:R ${sig.rrr}</span>` : ""}
+          ${sig.rrr ? `<span class="meta-badge rrr-badge">⚖️ R:R ${sig.rrr}</span>` : ""}
           ${sig.rsi ? `<span class="meta-badge rsi-badge">📊 RSI ${sig.rsi}</span>` : ""}
-          ${sig.confluenceScore !== undefined ? `<span class="meta-badge confluence-badge">✨ Confluence ${sig.confluenceScore}</span>` : ""}
-          ${sig.accuracy ? `<span class="meta-badge accuracy-badge">🎯 ${sig.accuracy} Acc</span>` : ""}
-          ${sig.direction === "NEUTRAL" ? `<span class="meta-badge free-badge" style="border-color: rgba(255,255,255,0.1); color:#ffaa00;">DYNAMIC SCAN</span>` : (sig.tier === "free" ? `<span class="meta-badge free-badge">FREE Signal</span>` : `<span class="meta-badge vip-badge">⭐ VIP</span>`)}
+          ${sig.confluenceScore !== undefined ? `<span class="meta-badge confluence-badge">✨ Score ${sig.confluenceScore}</span>` : ""}
+          ${sig.accuracy ? `<span class="meta-badge accuracy-badge">🎯 ${sig.accuracy}</span>` : ""}
+          ${sig.direction === "NEUTRAL" ? `<span class="meta-badge free-badge" style="color:#ffaa00;">DYNAMIC SCAN</span>` : (sig.tier === "free" ? `<span class="meta-badge free-badge">FREE Signal</span>` : `<span class="meta-badge vip-badge">⭐ VIP</span>`)}
         </div>
       `;
 
       html = `
-        <div class="signal-header">
-          <div>
-            <h3 class="signal-pair">${sig.pair}</h3>
-            <span class="signal-direction ${sideBadgeClass}">${sig.direction}</span>
-            <span class="signal-timeframe">${sig.timeframe}</span>
+        <div class="signal-card-top-bar"></div>
+        <div class="signal-card-inner">
+          <div class="signal-header">
+            <div>
+              <h3 class="signal-pair">${sig.pair}</h3>
+              <div class="signal-pair-sub">
+                <span class="signal-direction ${sideBadgeClass}">${sig.direction}</span>
+                <span class="signal-timeframe">${sig.timeframe || '1H'}</span>
+              </div>
+            </div>
+            <span class="signal-status-badge ${statusClass}">${statusLabel}</span>
           </div>
-          <span class="signal-status-badge ${statusClass}">${statusLabel}</span>
+          <div class="signal-body">
+            <div class="signal-detail">
+              <span>Entry Target</span>
+              <strong>${sig.entry}</strong>
+            </div>
+            <div class="signal-detail">
+              <span>Stop Loss</span>
+              <strong style="color: var(--color-sell);">${sig.stopLoss}</strong>
+            </div>
+            <div class="signal-targets">
+              <span>Take Profit Targets</span>
+              <ul>${targetsList}</ul>
+            </div>
+          </div>
+          <div class="signal-analysis">
+            <div class="analysis-title">🔬 Confluence Analysis</div>
+            <div class="analysis-text">${sig.analysisText || 'Multi-indicator real-time market analysis'}</div>
+          </div>
+          ${metaBadges}
         </div>
-        <div class="signal-body">
-          <div class="signal-detail">
-            <span>Entry Target</span>
-            <strong>${sig.entry}</strong>
-          </div>
-          <div class="signal-detail">
-            <span>Stop Loss</span>
-            <strong class="text-red">${sig.stopLoss}</strong>
-          </div>
-          <div class="signal-targets">
-            <span>Take Profit Targets</span>
-            <ul>${targetsList}</ul>
-          </div>
+        <div class="signal-card-footer">
+          <span class="signal-timestamp">${timeAgo}</span>
+          <a href="${tvLink}" target="_blank" rel="noopener" class="btn-tradingview" title="View ${sig.pair} chart on TradingView">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.046-.326L17.86 1.968c-.42-.326-.981-.7-2.055-.607L3.01 2.295c-.466.046-.56.28-.374.466zm.793 3.08v13.904c0 .747.373 1.027 1.214.98l14.523-.84c.841-.046.935-.56.935-1.167V6.354c0-.606-.233-.933-.748-.887l-15.177.887c-.56.047-.747.327-.747.933zm14.337.745c.093.42 0 .84-.42.888l-.7.14v10.264c-.608.327-1.168.514-1.635.514-.748 0-.935-.234-1.495-.933l-4.577-7.186v6.952L12.21 19s0 .84-1.168.84l-3.222.186c-.093-.186 0-.653.327-.746l.84-.233V9.854L7.822 9.76c-.094-.42.14-1.026.793-1.073l3.456-.233 4.764 7.279v-6.44l-1.215-.14c-.093-.514.28-.887.747-.933zM1.936 1.035l13.31-.98c1.634-.14 2.055-.047 3.082.7l4.249 2.986c.7.513.934.653.934 1.213v16.378c0 1.026-.373 1.634-1.68 1.726l-15.458.934c-.98.047-1.448-.093-1.962-.747l-3.129-4.06c-.56-.747-.793-1.306-.793-1.96V2.667c0-.839.374-1.54 1.447-1.632z"/>
+            </svg>
+            Chart on TradingView
+          </a>
         </div>
-        <div class="signal-analysis">
-          <div class="analysis-title">🔬 Confluence Analysis</div>
-          <div class="analysis-text">${sig.analysisText || 'Real-time indicators alignment check'}</div>
-        </div>
-        ${metaBadges}
       `;
     }
 
@@ -1039,15 +1073,24 @@ function updateBotStats(wins, losses, totalPnl) {
   document.getElementById("bot-wins").textContent = wins;
   document.getElementById("bot-losses").textContent = losses;
   
+  // Update win rate
+  const total = wins + losses;
+  const winRate = total > 0 ? ((wins / total) * 100).toFixed(1) : "0.0";
+  const winRateEl = document.getElementById("bot-winrate");
+  if (winRateEl) {
+    winRateEl.textContent = winRate + "%";
+    winRateEl.style.color = parseFloat(winRate) >= 70 ? "var(--color-buy)" : parseFloat(winRate) >= 50 ? "var(--color-gold)" : "var(--color-sell)";
+  }
+
   const pnlEl = document.getElementById("bot-total-pnl");
   pnlEl.textContent = (totalPnl >= 0 ? "+" : "") + totalPnl.toFixed(2) + "%";
   
   if (totalPnl > 0) {
-    pnlEl.className = "metric-value text-green";
+    pnlEl.style.color = "var(--color-buy)";
   } else if (totalPnl < 0) {
-    pnlEl.className = "metric-value text-red";
+    pnlEl.style.color = "var(--color-sell)";
   } else {
-    pnlEl.className = "metric-value text-gray";
+    pnlEl.style.color = "var(--text-secondary)";
   }
 }
 
@@ -1072,8 +1115,21 @@ function addBotLog(text) {
   const botLogEl = document.getElementById("bot-log");
   if (!botLogEl) return;
   const time = new Date().toLocaleTimeString();
-  botLogEl.innerHTML += `<div>[${time}] ${text}</div>`;
+  
+  // Color-code log entries
+  let cssClass = 'log-info';
+  const lowerText = text.toLowerCase();
+  if (lowerText.includes('win') || lowerText.includes('take-profit') || lowerText.includes('closed') && lowerText.includes('win')) cssClass = 'log-success';
+  else if (lowerText.includes('loss') || lowerText.includes('stop-loss') || lowerText.includes('error')) cssClass = 'log-error';
+  else if (lowerText.includes('executing') || lowerText.includes('executed') || lowerText.includes('opened') || lowerText.includes('auto-trading')) cssClass = 'log-warn';
+  else if (lowerText.includes('system') || lowerText.includes('initialized') || lowerText.includes('started') || lowerText.includes('analysis')) cssClass = 'log-system';
+  
+  botLogEl.innerHTML += `<div class="${cssClass}">[${time}] ${text}</div>`;
   botLogEl.scrollTop = botLogEl.scrollHeight;
+  
+  // Keep log to last 100 entries
+  const entries = botLogEl.querySelectorAll('div');
+  if (entries.length > 100) entries[0].remove();
 }
 
 // Bot Execution Trigger
