@@ -15,6 +15,12 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == userId;
     }
 
+    // Fields that only admin can set/change
+    function isChangingAdminOnlyFields() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasAny(['premiumStatus', 'activePlan', 'premiumActivatedAt', 'premiumExpiresAt', 'role', 'topupStatus']);
+    }
+
     // Rules for Users collection
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin() || (request.auth != null && 'referredBy' in resource.data && resource.data.referredBy == request.auth.uid);
@@ -23,22 +29,24 @@ service cloud.firestore {
       allow create: if request.auth != null && request.auth.uid == userId;
       
       // Allow update: 
-      // 1. Owner can update their own details, but cannot self-approve premium or change role to admin.
-      // 2. Admins can update anything.
-      allow update: if isAdmin() || (
-  isOwner(userId) &&
-  request.resource.data.role == resource.data.role &&
-  (request.resource.data.premiumStatus == resource.data.premiumStatus ||
-   request.resource.data.premiumStatus == 'pending') &&
-  // Allow adding/updating paymentSlipUrl during premium request
-  (request.resource.data.paymentSlipUrl == resource.data.paymentSlipUrl ||
-   (!('paymentSlipUrl' in resource.data) && request.resource.data.paymentSlipUrl is string))
-);
+      // 1. Admins can update anything.
+      // 2. Owner can update their own profile (but cannot change role or premium/topup status).
+      // 3. Any logged-in user can update ONLY walletBalance and totalReferralEarnings on OTHER user docs
+      //    (used for instant cross-user referral commission crediting).
+      allow update: if isAdmin() 
+        || (isOwner(userId) && !isChangingAdminOnlyFields() && request.resource.data.role == resource.data.role)
+        || (
+          request.auth != null
+          && !isOwner(userId)
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['walletBalance', 'totalReferralEarnings'])
+          && request.resource.data.walletBalance >= 0
+        );
     }
 
     // Rules for Signals collection
     match /signals/{signalId} {
-      // Anyone logged in can read signals (we will handle the free/paid masking in front-end code)
+      // Anyone logged in can read signals (free/paid masking done client-side)
       allow read: if request.auth != null;
       allow write: if isAdmin();
     }

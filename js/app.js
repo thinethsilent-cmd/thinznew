@@ -23,11 +23,13 @@ import {
   subscribeToAllUsers, 
   approvePremium, 
   rejectPremium,
-  checkAndExpireMembership
+  checkAndExpireMembership,
+  approveTopup,
+  rejectTopup
 } from "./admin.js";
 import { db, storage } from "./firebase-config.js";
 import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-storage.js";
-import { doc, updateDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+import { doc, updateDoc, collection, query, where, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
 // Global App State
 let state = {
@@ -213,6 +215,26 @@ function initAuthListeners() {
         adminLink.classList.add("hidden");
       }
 
+      // Update Wallet Balance displays
+      const balance = profile?.walletBalance !== undefined ? profile.walletBalance : 0.00;
+      const navWallet = document.getElementById("nav-wallet-balance");
+      if (navWallet) navWallet.textContent = `$${balance.toFixed(2)}`;
+
+      const walletDisplay = document.getElementById("wallet-balance-display");
+      if (walletDisplay) walletDisplay.textContent = `$${balance.toFixed(2)}`;
+
+      // Update Top-Up pending notice
+      const activeTopupNotice = document.getElementById("active-topup-notice");
+      const pendingTopupAmtText = document.getElementById("pending-topup-amount-text");
+      if (activeTopupNotice && pendingTopupAmtText) {
+        if (profile?.topupStatus === "pending") {
+          activeTopupNotice.classList.remove("hidden");
+          pendingTopupAmtText.textContent = `$${(profile.topupAmount || 0).toFixed(2)}`;
+        } else {
+          activeTopupNotice.classList.add("hidden");
+        }
+      }
+
       // Render Badge
       updatePlanBadge(profile?.premiumStatus, profile?.premiumExpiresAt);
 
@@ -226,9 +248,12 @@ function initAuthListeners() {
     } else {
       // User logged out
       authLinks.forEach(el => el.classList.add("hidden"));
-      guestLinks.forEach(el => el.classList.remove("hidden"));
+      guestLinks.forEach(el => el.classList.add("hidden"));
       profileSection.classList.add("hidden");
       adminLink.classList.add("hidden");
+
+      const navWallet = document.getElementById("nav-wallet-balance");
+      if (navWallet) navWallet.textContent = "$0.00";
       
       stopBotExecution();
       cleanupSubscriptions("");
@@ -440,9 +465,10 @@ function initFormListeners() {
   if (submitTxForm) {
     submitTxForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-      const txid = document.getElementById("payment-txid").value;
+      const method = document.getElementById("payment-method-field").value;
+      const plan = document.getElementById("payment-plan").value;
       const msgEl = document.getElementById("payment-msg");
-      const submitBtn = submitTxForm.querySelector("button[type='submit']");
+      const submitBtn = document.getElementById("btn-submit-upgrade");
       const progressWrap = document.getElementById("upload-progress-wrap");
       const progressBar = document.getElementById("upload-progress-bar");
       const progressPct = document.getElementById("upload-progress-pct");
@@ -459,117 +485,434 @@ function initFormListeners() {
         return;
       }
 
-      if (!txid.trim()) {
+      if (!plan) {
         msgEl.className = "status-message text-red";
-        msgEl.textContent = "Please enter a valid Reference ID / TxID.";
+        msgEl.textContent = "Please select a subscription plan from the cards above first.";
         return;
       }
 
-      // Disable button to prevent double-submits
-      if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "Submitting..."; }
+      const getPriceUSD = (pName) => {
+        switch (pName) {
+          case "7 Days": return 5.00;
+          case "2 Weeks": return 9.67;
+          case "1 Month": return 16.67;
+          case "3 Months": return 36.67;
+          case "Lifetime": return 66.67;
+          default: return 16.67;
+        }
+      };
+      const usdPrice = getPriceUSD(plan);
+
+      if (method === "wallet") {
+        // WALLET PAYMENT METHOD
+        const userBalance = state.profile?.walletBalance || 0;
+        if (userBalance < usdPrice) {
+          msgEl.className = "status-message text-red";
+          msgEl.textContent = `Insufficient balance. This upgrade costs $${usdPrice.toFixed(2)}, but you only have $${userBalance.toFixed(2)}. Please top up your wallet.`;
+          return;
+        }
+
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "Processing payment..."; }
+        msgEl.className = "status-message text-yellow";
+        msgEl.textContent = "Processing wallet checkout...";
+
+        try {
+          const newBalance = parseFloat((userBalance - usdPrice).toFixed(2));
+          const getPlanExpiryDate = (pName) => {
+            const now = new Date();
+            switch (pName) {
+              case "7 Days":    now.setDate(now.getDate() + 7);   break;
+              case "2 Weeks":   now.setDate(now.getDate() + 14);  break;
+              case "1 Month":   now.setMonth(now.getMonth() + 1); break;
+              case "3 Months":  now.setMonth(now.getMonth() + 3); break;
+              case "Lifetime":  return null;
+              default:          now.setMonth(now.getMonth() + 1);
+            }
+            return now.toISOString();
+          };
+          const expiresAt = getPlanExpiryDate(plan);
+
+          const userRef = doc(db, "users", state.user.uid);
+          const userUpdates = {
+            premiumStatus: "paid",
+            activePlan: plan,
+            premiumActivatedAt: new Date().toISOString(),
+            premiumExpiresAt: expiresAt,
+            walletBalance: newBalance
+          };
+
+          // Crediting referrer 15% commission instantly
+          if (state.profile?.referredBy && !state.profile?.referralBonusProcessed) {
+            try {
+              const referrerId = state.profile.referredBy;
+              const referrerRef = doc(db, "users", referrerId);
+              const referrerSnap = await getDoc(referrerRef);
+              if (referrerSnap.exists()) {
+                const referrerData = referrerSnap.data();
+                const commission = parseFloat((usdPrice * 0.15).toFixed(2));
+                await updateDoc(referrerRef, {
+                  walletBalance: parseFloat(((referrerData.walletBalance || 0) + commission).toFixed(2)),
+                  totalReferralEarnings: parseFloat(((referrerData.totalReferralEarnings || 0) + commission).toFixed(2))
+                });
+                console.log(`Referrer ${referrerId} awarded 15% instant commission: $${commission}`);
+                userUpdates.referralBonusProcessed = true;
+              }
+            } catch (err) {
+              console.error("Error crediting commission on wallet upgrade:", err);
+            }
+          }
+
+          await updateDoc(userRef, userUpdates);
+
+          // Update local state
+          state.profile = { ...state.profile, ...userUpdates };
+          updatePlanBadge("paid", expiresAt);
+
+          msgEl.className = "status-message text-green";
+          msgEl.textContent = "✅ VIP Subscription Activated Successfully using wallet balance!";
+
+          // Reset forms and hide panels
+          submitTxForm.reset();
+          premiumCheckbox.checked = false;
+          paymentDetails.classList.add("hidden");
+
+          setTimeout(() => {
+            msgEl.textContent = "";
+            loadAccountPage();
+          }, 2000);
+        } catch (err) {
+          msgEl.className = "status-message text-red";
+          msgEl.textContent = "Payment failed: " + err.message;
+        } finally {
+          if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = `Pay $${usdPrice.toFixed(2)} with Wallet`; }
+        }
+      } else {
+        // BANK PAYMENT METHOD
+        const txid = document.getElementById("payment-txid").value;
+        if (!txid.trim()) {
+          msgEl.className = "status-message text-red";
+          msgEl.textContent = "Please enter a valid Reference ID / TxID.";
+          return;
+        }
+
+        // Disable button to prevent double-submits
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "Submitting..."; }
+        msgEl.className = "status-message text-yellow";
+        msgEl.textContent = "Submitting payment details...";
+
+        try {
+          // Step 1: Attempt image upload with live progress bar
+          const fileInput = document.getElementById("payment-slip");
+          let slipUrl = null;
+          if (fileInput && fileInput.files.length > 0) {
+            const file = fileInput.files[0];
+            try {
+              console.log("Starting payment slip upload:", file.name, file.size);
+              // Show progress bar
+              if (progressWrap) progressWrap.classList.remove("hidden");
+              setProgress(0);
+              msgEl.textContent = "Uploading payment slip...";
+
+              const storageRef = ref(storage, `payment_slips/${state.user.uid}/${Date.now()}_${file.name}`);
+              const uploadTask = uploadBytesResumable(storageRef, file);
+
+              slipUrl = await new Promise((resolve, reject) => {
+                // Add a timeout of 7 seconds so we don't get stuck indefinitely
+                const timeoutId = setTimeout(() => {
+                  reject(new Error("Upload timed out (7 seconds limit reached)."));
+                }, 7000);
+
+                uploadTask.on(
+                  "state_changed",
+                  (snapshot) => {
+                    // Live progress update
+                    const pct = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+                    setProgress(isNaN(pct) ? 0 : pct);
+                    msgEl.textContent = `Uploading payment slip... (${isNaN(pct) ? 0 : pct}%)`;
+                  },
+                  (error) => {
+                    clearTimeout(timeoutId);
+                    console.error("Firebase upload error callback:", error);
+                    reject(error);
+                  },
+                  async () => {
+                    clearTimeout(timeoutId);
+                    try {
+                      setProgress(100);
+                      msgEl.textContent = "Upload completed! Getting link...";
+                      const url = await getDownloadURL(uploadTask.snapshot.ref);
+                      resolve(url);
+                    } catch (err) {
+                      console.error("Error getting download URL:", err);
+                      reject(err);
+                    }
+                  }
+                );
+              });
+
+              // Brief pause so user sees 100% before hiding
+              await new Promise(r => setTimeout(r, 600));
+            } catch (uploadErr) {
+              console.warn("Image upload failed:", uploadErr);
+              msgEl.className = "status-message text-red";
+              msgEl.textContent = `⚠️ Slip upload failed: ${uploadErr.message || uploadErr}. Submitting without image...`;
+              // Keep this warning message visible for 3 seconds so the user can read it
+              await new Promise(r => setTimeout(r, 3000));
+            } finally {
+              // Always hide progress bar after upload attempt
+              if (progressWrap) progressWrap.classList.add("hidden");
+              setProgress(0);
+            }
+          }
+
+          // Step 2: Update Firestore — this is the critical step
+          msgEl.className = "status-message text-yellow";
+          msgEl.textContent = "Saving verification request...";
+          const userRef = doc(db, "users", state.user.uid);
+          const selectedPlan = document.getElementById("payment-plan")?.value || "";
+          await updateDoc(userRef, {
+            premiumStatus: "pending",
+            paymentTxid: txid.trim(),
+            paymentPlan: selectedPlan, // e.g. "7 Days", "1 Month", "Lifetime"
+            paymentRequestedAt: new Date().toISOString(),
+            ...(slipUrl && { paymentSlipUrl: slipUrl })
+          });
+
+          // Step 3: Update local state and UI
+          if (state.profile) state.profile.premiumStatus = "pending";
+          updatePlanBadge("pending");
+
+          msgEl.className = "status-message text-green";
+          msgEl.textContent = "✅ Request submitted! Admin will verify your payment and activate your account shortly.";
+
+          // Reset form
+          submitTxForm.reset();
+          premiumCheckbox.checked = false;
+          paymentDetails.classList.add("hidden");
+
+          // Refresh account view to show pending panel
+          loadAccountPage();
+        } catch (err) {
+          msgEl.className = "status-message text-red";
+          msgEl.textContent = "Error: " + (err.message || "Could not submit request. Please try again.");
+          console.error("Payment submission error:", err);
+        } finally {
+          // Always re-enable submit button
+          if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = "Submit Verification Request"; }
+          if (progressWrap) progressWrap.classList.add("hidden");
+        }
+      }
+    });
+  }
+
+  // Plan Selection Globals
+  window.selectPlan = function(cardEl) {
+    document.querySelectorAll(".plan-card").forEach(c => {
+      c.style.borderColor = "var(--border-color)";
+      c.style.background = "";
+    });
+
+    cardEl.style.borderColor = "var(--color-primary)";
+    cardEl.style.background = "rgba(46, 196, 160, 0.05)";
+
+    const planName = cardEl.getAttribute("data-plan");
+    const priceLkr = cardEl.getAttribute("data-price");
+    document.getElementById("payment-plan").value = planName;
+    document.getElementById("selected-plan-label").textContent = `${planName} Plan — Rs. ${priceLkr}/=`;
+
+    const getPriceUSD = (p) => {
+      switch (p) {
+        case "7 Days": return 5.00;
+        case "2 Weeks": return 9.67;
+        case "1 Month": return 16.67;
+        case "3 Months": return 36.67;
+        case "Lifetime": return 66.67;
+        default: return 16.67;
+      }
+    };
+    const usdPrice = getPriceUSD(planName);
+    document.getElementById("wallet-plan-price-usd").textContent = `$${usdPrice.toFixed(2)}`;
+
+    const userBalance = state.profile?.walletBalance || 0;
+    document.getElementById("wallet-user-balance-usd").textContent = `$${userBalance.toFixed(2)}`;
+
+    document.getElementById("payment-instructions-panel").classList.remove("hidden");
+    document.getElementById("premium-opt-in").checked = true;
+
+    window.setPayMethod("bank");
+  };
+
+  window.setPayMethod = function(method) {
+    document.getElementById("payment-method-field").value = method;
+    const btnBank = document.getElementById("pay-method-bank");
+    const btnWallet = document.getElementById("pay-method-wallet");
+    
+    const bankView = document.getElementById("checkout-bank-view");
+    const bankFields = document.getElementById("checkout-bank-form-fields");
+    const walletView = document.getElementById("checkout-wallet-view");
+    const submitBtn = document.getElementById("btn-submit-upgrade");
+
+    if (method === "bank") {
+      btnBank.style.borderColor = "var(--color-primary)";
+      btnBank.style.background = "rgba(46, 196, 160, 0.08)";
+      btnWallet.style.borderColor = "";
+      btnWallet.style.background = "";
+
+      bankView.classList.remove("hidden");
+      bankFields.classList.remove("hidden");
+      walletView.classList.add("hidden");
+
+      document.getElementById("payment-txid").setAttribute("required", "");
+      document.getElementById("payment-slip").setAttribute("required", "");
+      submitBtn.textContent = "Submit Verification Request";
+    } else {
+      btnWallet.style.borderColor = "var(--color-primary)";
+      btnWallet.style.background = "rgba(46, 196, 160, 0.08)";
+      btnBank.style.borderColor = "";
+      btnBank.style.background = "";
+
+      bankView.classList.add("hidden");
+      bankFields.classList.add("hidden");
+      walletView.classList.remove("hidden");
+
+      document.getElementById("payment-txid").removeAttribute("required");
+      document.getElementById("payment-slip").removeAttribute("required");
+
+      const plan = document.getElementById("payment-plan").value;
+      const getPriceUSD = (p) => {
+        switch (p) {
+          case "7 Days": return 5.00;
+          case "2 Weeks": return 9.67;
+          case "1 Month": return 16.67;
+          case "3 Months": return 36.67;
+          case "Lifetime": return 66.67;
+          default: return 16.67;
+        }
+      };
+      submitBtn.textContent = `Pay $${getPriceUSD(plan).toFixed(2)} with Wallet`;
+    }
+  };
+
+  // Deposit input conversions
+  const depositAmtUSD = document.getElementById("deposit-amount-usd");
+  const depositAmtLKR = document.getElementById("deposit-amount-lkr");
+  if (depositAmtUSD && depositAmtLKR) {
+    depositAmtUSD.addEventListener("input", (e) => {
+      const usdVal = parseFloat(e.target.value) || 0;
+      const lkrVal = Math.round(usdVal * 300);
+      depositAmtLKR.textContent = `Rs. ${lkrVal.toLocaleString()}/=`;
+    });
+  }
+
+  // Wallet Deposit form submission
+  const walletDepositForm = document.getElementById("wallet-deposit-form");
+  if (walletDepositForm) {
+    walletDepositForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const usdAmount = parseFloat(document.getElementById("deposit-amount-usd").value);
+      const txid = document.getElementById("deposit-txid").value.trim();
+      const msgEl = document.getElementById("deposit-msg");
+      const submitBtn = document.getElementById("btn-submit-deposit");
+      const progressWrap = document.getElementById("deposit-upload-progress-wrap");
+      const progressBar = document.getElementById("deposit-upload-progress-bar");
+      const progressPct = document.getElementById("deposit-upload-progress-pct");
+      
+      const setProgress = (pct) => {
+        if (progressBar) progressBar.style.width = pct + "%";
+        if (progressPct) progressPct.textContent = pct + "%";
+      };
+
+      if (!state.user) {
+        msgEl.className = "status-message text-red";
+        msgEl.textContent = "Error: You must be logged in to deposit.";
+        return;
+      }
+
+      if (isNaN(usdAmount) || usdAmount <= 0) {
+        msgEl.className = "status-message text-red";
+        msgEl.textContent = "Please enter a valid amount.";
+        return;
+      }
+
+      if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "Submitting Request..."; }
       msgEl.className = "status-message text-yellow";
-      msgEl.textContent = "Submitting payment details...";
+      msgEl.textContent = "Uploading slip...";
 
       try {
-        // Step 1: Attempt image upload with live progress bar
-        const fileInput = document.getElementById("payment-slip");
+        const fileInput = document.getElementById("deposit-slip");
         let slipUrl = null;
         if (fileInput && fileInput.files.length > 0) {
           const file = fileInput.files[0];
           try {
-            console.log("Starting payment slip upload:", file.name, file.size);
-            // Show progress bar
             if (progressWrap) progressWrap.classList.remove("hidden");
             setProgress(0);
-            msgEl.textContent = "Uploading payment slip...";
-
-            const storageRef = ref(storage, `payment_slips/${state.user.uid}/${Date.now()}_${file.name}`);
+            
+            const storageRef = ref(storage, `deposit_slips/${state.user.uid}/${Date.now()}_${file.name}`);
             const uploadTask = uploadBytesResumable(storageRef, file);
-
+            
             slipUrl = await new Promise((resolve, reject) => {
-              // Add a timeout of 7 seconds so we don't get stuck indefinitely
               const timeoutId = setTimeout(() => {
-                reject(new Error("Upload timed out (7 seconds limit reached)."));
+                reject(new Error("Upload timed out (7 seconds limit)."));
               }, 7000);
-
-              uploadTask.on(
-                "state_changed",
+              
+              uploadTask.on("state_changed", 
                 (snapshot) => {
-                  // Live progress update
                   const pct = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
                   setProgress(isNaN(pct) ? 0 : pct);
-                  msgEl.textContent = `Uploading payment slip... (${isNaN(pct) ? 0 : pct}%)`;
                 },
                 (error) => {
                   clearTimeout(timeoutId);
-                  console.error("Firebase upload error callback:", error);
                   reject(error);
                 },
                 async () => {
                   clearTimeout(timeoutId);
                   try {
                     setProgress(100);
-                    msgEl.textContent = "Upload completed! Getting link...";
                     const url = await getDownloadURL(uploadTask.snapshot.ref);
                     resolve(url);
                   } catch (err) {
-                    console.error("Error getting download URL:", err);
                     reject(err);
                   }
                 }
               );
             });
-
-            // Brief pause so user sees 100% before hiding
             await new Promise(r => setTimeout(r, 600));
           } catch (uploadErr) {
-            console.warn("Image upload failed:", uploadErr);
+            console.error("Slip upload failed:", uploadErr);
             msgEl.className = "status-message text-red";
-            msgEl.textContent = `⚠️ Slip upload failed: ${uploadErr.message || uploadErr}. Submitting without image...`;
-            // Keep this warning message visible for 3 seconds so the user can read it
-            await new Promise(r => setTimeout(r, 3000));
+            msgEl.textContent = `⚠️ receipt upload failed: ${uploadErr.message}.`;
+            throw uploadErr;
           } finally {
-            // Always hide progress bar after upload attempt
             if (progressWrap) progressWrap.classList.add("hidden");
             setProgress(0);
           }
         }
 
-        // Step 2: Update Firestore — this is the critical step
-        msgEl.className = "status-message text-yellow";
-        msgEl.textContent = "Saving verification request...";
         const userRef = doc(db, "users", state.user.uid);
-        const selectedPlan = document.getElementById("payment-plan")?.value || "";
         await updateDoc(userRef, {
-          premiumStatus: "pending",
-          paymentTxid: txid.trim(),
-          paymentPlan: selectedPlan, // e.g. "7 Days", "1 Month", "Lifetime"
-          paymentRequestedAt: new Date().toISOString(),
-          ...(slipUrl && { paymentSlipUrl: slipUrl })
+          topupStatus: "pending",
+          topupAmount: usdAmount,
+          topupTxid: txid,
+          topupSlipUrl: slipUrl,
+          topupRequestedAt: new Date().toISOString()
         });
 
-        // Step 3: Update local state and UI
-        if (state.profile) state.profile.premiumStatus = "pending";
-        updatePlanBadge("pending");
+        if (state.profile) {
+          state.profile.topupStatus = "pending";
+          state.profile.topupAmount = usdAmount;
+        }
 
         msgEl.className = "status-message text-green";
-        msgEl.textContent = "✅ Request submitted! Admin will verify your payment and activate your account shortly.";
+        msgEl.textContent = "✅ Top-Up request submitted! Wallet will be credited shortly.";
+        walletDepositForm.reset();
+        if (depositAmtLKR) depositAmtLKR.textContent = "Rs. 0/=";
 
-        // Reset form
-        submitTxForm.reset();
-        premiumCheckbox.checked = false;
-        paymentDetails.classList.add("hidden");
-
-        // Refresh account view to show pending panel
         loadAccountPage();
       } catch (err) {
         msgEl.className = "status-message text-red";
-        msgEl.textContent = "Error: " + (err.message || "Could not submit request. Please try again.");
-        console.error("Payment submission error:", err);
+        msgEl.textContent = "Error: " + err.message;
       } finally {
-        // Always re-enable submit button
-        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = "Submit Verification Request"; }
-        if (progressWrap) progressWrap.classList.add("hidden");
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = "Submit Top-Up Request"; }
       }
     });
   }
@@ -822,7 +1165,9 @@ function renderFilteredSignals() {
     }
 
     const targetsList = sig.targets.map((t, idx) => `<li>Target ${idx + 1}: <span class="text-white font-medium">${t}</span></li>`).join("");
-    const isLocked = sig.locked;
+    const purchasedSignals = state.profile?.purchasedSignals || [];
+    const isPurchased = purchasedSignals.includes(sig.id);
+    const isLocked = sig.locked && !isPurchased;
     
     // Generate TradingView chart link for the pair
     const tvSymbol = sig.symbol ? sig.symbol.replace("USDT", "") + "USDT" : sig.pair.replace("/", "");
@@ -840,6 +1185,13 @@ function renderFilteredSignals() {
     
     let html = "";
     if (isLocked) {
+      const getPrice = (score) => {
+        const parsed = parseInt(score) || 6;
+        const calculated = 0.10 + (parsed - 5) * 0.15;
+        return parseFloat(Math.min(1.00, Math.max(0.10, calculated)).toFixed(2));
+      };
+      const price = getPrice(sig.confluenceScore);
+
       card.className = "signal-card locked-card";
       html = `
         <div class="signal-card-top-bar"></div>
@@ -847,8 +1199,13 @@ function renderFilteredSignals() {
           <div class="lock-overlay">
             <svg class="lock-icon" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2V7a5 5 0 00-5-5zM7 7a3 3 0 016 0v2H7V7z"></path></svg>
             <h4 class="lock-title">VIP Premium Signal – ${sig.pair}</h4>
-            <p class="lock-desc">TA-Verified signal with up to 98% accuracy. Upgrade to unlock all signals + auto-bot.</p>
-            <a href="#account" class="btn btn-primary btn-sm">Unlock with Premium</a>
+            <p class="lock-desc">TA-Verified signal with up to 98% accuracy. Unlock with Premium or buy individually.</p>
+            <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:8px;">
+              <a href="#account" class="btn btn-primary btn-sm">Unlock with Premium</a>
+              <button class="btn btn-secondary btn-sm btn-buy-signal" data-id="${sig.id}" data-pair="${sig.pair}" data-confluence="${sig.confluenceScore || 6}">
+                Buy Signal ($${price.toFixed(2)})
+              </button>
+            </div>
           </div>
           <div class="signal-header blurred">
             <div>
@@ -931,6 +1288,67 @@ function renderFilteredSignals() {
 
     card.innerHTML = html;
     container.appendChild(card);
+  });
+
+  // Attach Buy Signal click listeners
+  document.querySelectorAll(".btn-buy-signal").forEach(btn => {
+    btn.addEventListener("click", async (e) => {
+      const sigId = e.currentTarget.getAttribute("data-id");
+      const pair = e.currentTarget.getAttribute("data-pair");
+      const confluence = parseFloat(e.currentTarget.getAttribute("data-confluence"));
+      const getPrice = (score) => {
+        const parsed = parseInt(score) || 6;
+        const calculated = 0.10 + (parsed - 5) * 0.15;
+        return parseFloat(Math.min(1.00, Math.max(0.10, calculated)).toFixed(2));
+      };
+      const price = getPrice(confluence);
+
+      if (!state.user) {
+        alert("Please login first to purchase signals.");
+        window.location.hash = "#auth";
+        return;
+      }
+
+      const balance = state.profile?.walletBalance || 0;
+      if (balance < price) {
+        alert(`Insufficient balance. This signal costs $${price.toFixed(2)}, but you only have $${balance.toFixed(2)}. Please top up your wallet.`);
+        window.location.hash = "#account";
+        setTimeout(() => {
+          const panel = document.getElementById("wallet-topup-panel");
+          if (panel) panel.scrollIntoView({ behavior: "smooth" });
+        }, 300);
+        return;
+      }
+
+      if (confirm(`Are you sure you want to purchase the ${pair} premium signal for $${price.toFixed(2)} from your wallet balance?`)) {
+        try {
+          showLoading(true);
+          const newBalance = parseFloat((balance - price).toFixed(2));
+          const currentPurchased = state.profile.purchasedSignals || [];
+          
+          const userRef = doc(db, "users", state.user.uid);
+          await updateDoc(userRef, {
+            walletBalance: newBalance,
+            purchasedSignals: [...currentPurchased, sigId]
+          });
+
+          // Update local state
+          state.profile.walletBalance = newBalance;
+          state.profile.purchasedSignals = [...currentPurchased, sigId];
+
+          alert(`✅ Signal for ${pair} purchased successfully!`);
+          
+          // Refresh navbar & signals view
+          const navWallet = document.getElementById("nav-wallet-balance");
+          if (navWallet) navWallet.textContent = `$${newBalance.toFixed(2)}`;
+          renderFilteredSignals();
+        } catch (err) {
+          alert("Error purchasing signal: " + err.message);
+        } finally {
+          showLoading(false);
+        }
+      }
+    });
   });
 
   // Render Pagination Buttons
@@ -1312,13 +1730,13 @@ function loadAccountPage() {
         // Update stats counters
         const totalEl = document.getElementById("ref-count-total");
         const successfulEl = document.getElementById("ref-count-successful");
-        const daysEl = document.getElementById("ref-days-earned");
+        const earnedEl = document.getElementById("ref-total-earned");
 
         if (totalEl) totalEl.textContent = invitedCount;
         if (successfulEl) successfulEl.textContent = successfulCount;
-        if (daysEl) {
-          const days = state.profile?.vipDaysEarned || (successfulCount * 3);
-          daysEl.textContent = `${days} Day${days === 1 ? "" : "s"}`;
+        if (earnedEl) {
+          const totalEarned = state.profile?.totalReferralEarnings || 0;
+          earnedEl.textContent = `$${totalEarned.toFixed(2)}`;
         }
       })
       .catch(err => {
@@ -1397,6 +1815,54 @@ function loadAdminPage() {
           await rejectPremium(uid);
         });
       });
+    }
+
+    // 1b. Pending Top-Up Approvals
+    const pendingTopupsList = document.getElementById("admin-pending-topups");
+    if (pendingTopupsList) {
+      pendingTopupsList.innerHTML = "";
+      const pendingTopupUsers = users.filter(u => u.topupStatus === "pending");
+      
+      if (pendingTopupUsers.length === 0) {
+        pendingTopupsList.innerHTML = `<div class="empty-state">No pending top-up verification requests.</div>`;
+      } else {
+        pendingTopupUsers.forEach(u => {
+          const div = document.createElement("div");
+          div.className = "payment-request-card";
+          div.innerHTML = `
+            <div>
+              <h4 class="text-white font-medium">${u.displayName || u.email}</h4>
+              <p class="text-sm text-gray mt-1">TxID/Ref: <span class="text-yellow font-mono">${u.topupTxid}</span></p>
+              <p class="text-sm text-gray mt-1">Deposit Amount: <span class="text-green font-bold">$${(u.topupAmount || 0).toFixed(2)}</span></p>
+              <p class="text-xs text-gray mt-1">Requested: ${new Date(u.topupRequestedAt).toLocaleString()}</p>
+              ${u.topupSlipUrl ? `<img src="${u.topupSlipUrl}" class="payment-slip-thumb cursor-pointer" style="max-width:100px; margin-top:8px; border:1px solid var(--border-color);" onclick="openSlipModal('${u.topupSlipUrl}')"/>` : ''}
+            </div>
+            <div class="action-buttons" style="display:flex;gap:6px;align-items:center;">
+              <button class="btn btn-primary btn-sm btn-approve-topup" data-id="${u.uid}">✅ Accept</button>
+              <button class="btn btn-secondary btn-sm btn-reject-topup" data-id="${u.uid}">❌ Reject</button>
+            </div>
+          `;
+          pendingTopupsList.appendChild(div);
+        });
+
+        document.querySelectorAll(".btn-approve-topup").forEach(btn => {
+          btn.addEventListener("click", async (e) => {
+            const uid = e.target.getAttribute("data-id");
+            e.target.disabled = true;
+            e.target.textContent = "Crediting...";
+            await approveTopup(uid);
+          });
+        });
+
+        document.querySelectorAll(".btn-reject-topup").forEach(btn => {
+          btn.addEventListener("click", async (e) => {
+            const uid = e.target.getAttribute("data-id");
+            e.target.disabled = true;
+            e.target.textContent = "Rejecting...";
+            await rejectTopup(uid);
+          });
+        });
+      }
     }
 
     // 2. User Accounts win/loss listing

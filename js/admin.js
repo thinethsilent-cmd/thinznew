@@ -42,70 +42,64 @@ export function subscribeToAllUsers(callback) {
 export async function approvePremium(userId, planName = "1 Month") {
   try {
     const userRef = doc(db, "users", userId);
-    const expiresAt = getPlanExpiryDate(planName);
+    const userSnap = await getDoc(userRef);
+    if (!userSnap.exists()) throw new Error("User profile not found.");
+
+    const userData = userSnap.data();
+    const finalPlan = userData.paymentPlan || planName;
+    const expiresAt = getPlanExpiryDate(finalPlan);
+
     const updateData = {
       premiumStatus: "paid",
-      activePlan: planName,
+      activePlan: finalPlan,
       premiumActivatedAt: new Date().toISOString(),
       premiumExpiresAt: expiresAt  // null = Lifetime (never expires)
     };
 
-    // Check for referral bonus
+    // Check for referral commission (15%)
     try {
-      const userSnap = await getDoc(userRef);
-      if (userSnap.exists()) {
-        const userData = userSnap.data();
-        if (userData.referredBy && !userData.referralBonusProcessed) {
-          const referrerId = userData.referredBy;
-          const referrerRef = doc(db, "users", referrerId);
-          const referrerSnap = await getDoc(referrerRef);
-          if (referrerSnap.exists()) {
-            const referrerData = referrerSnap.data();
-            
-            let newStatus = "paid";
-            let newExpiresAt = null;
-            let activePlan = "Referral Bonus (3 Days)";
-            
-            const now = new Date();
-            if (referrerData.premiumStatus === "paid" && referrerData.premiumExpiresAt) {
-              // Existing non-lifetime subscription - extend by 3 days
-              const currentExpiry = new Date(referrerData.premiumExpiresAt);
-              const baseDate = currentExpiry > now ? currentExpiry : now;
-              baseDate.setDate(baseDate.getDate() + 3);
-              newExpiresAt = baseDate.toISOString();
-              activePlan = referrerData.activePlan || "VIP Premium";
-            } else if (referrerData.premiumStatus === "paid" && !referrerData.premiumExpiresAt) {
-              // Existing lifetime subscription - keep as lifetime
-              newStatus = "paid";
-              newExpiresAt = null;
-              activePlan = referrerData.activePlan || "Lifetime";
-            } else {
-              // Free/expired/pending user - grant 3 days VIP
-              now.setDate(now.getDate() + 3);
-              newExpiresAt = now.toISOString();
+      if (userData.referredBy && !userData.referralBonusProcessed) {
+        const referrerId = userData.referredBy;
+        const referrerRef = doc(db, "users", referrerId);
+        const referrerSnap = await getDoc(referrerRef);
+        if (referrerSnap.exists()) {
+          const referrerData = referrerSnap.data();
+          
+          // Calculate 15% commission in USD
+          const getPriceUSD = (plan) => {
+            switch (plan) {
+              case "7 Days": return 5.00;
+              case "2 Weeks": return 9.67;
+              case "1 Month": return 16.67;
+              case "3 Months": return 36.67;
+              case "Lifetime": return 66.67;
+              default: return 16.67;
             }
+          };
 
-            const referrerUpdates = {
-              premiumStatus: newStatus,
-              activePlan: activePlan,
-              premiumExpiresAt: newExpiresAt,
-              successfulReferrals: (referrerData.successfulReferrals || 0) + 1,
-              vipDaysEarned: (referrerData.vipDaysEarned || 0) + 3
-            };
-            await updateDoc(referrerRef, referrerUpdates);
-            console.log(`Referrer ${referrerId} rewarded with 3 days VIP. Expire: ${newExpiresAt}`);
-            
-            // Mark referral bonus as processed
-            updateData.referralBonusProcessed = true;
-          }
+          const packagePriceUSD = getPriceUSD(finalPlan);
+          const commissionUSD = parseFloat((packagePriceUSD * 0.15).toFixed(2));
+          
+          const currentWallet = referrerData.walletBalance || 0;
+          const currentEarnings = referrerData.totalReferralEarnings || 0;
+          
+          await updateDoc(referrerRef, {
+            walletBalance: parseFloat((currentWallet + commissionUSD).toFixed(2)),
+            totalReferralEarnings: parseFloat((currentEarnings + commissionUSD).toFixed(2))
+          });
+
+          console.log(`Referrer ${referrerId} awarded 15% commission of package price $${packagePriceUSD} = $${commissionUSD}`);
+          
+          // Mark referral bonus as processed
+          updateData.referralBonusProcessed = true;
         }
       }
     } catch (refErr) {
-      console.error("Error processing referral bonus in approvePremium:", refErr);
+      console.error("Error processing referral commission in approvePremium:", refErr);
     }
 
     await updateDoc(userRef, updateData);
-    console.log(`User ${userId} approved: Plan "${planName}", expires: ${expiresAt || "Never"}`);
+    console.log(`User ${userId} approved: Plan "${finalPlan}", expires: ${expiresAt || "Never"}`);
   } catch (error) {
     console.error("Error approving premium:", error);
     throw error;
@@ -125,6 +119,53 @@ export async function rejectPremium(userId) {
     console.log(`User ${userId} premium status rejected/reset.`);
   } catch (error) {
     console.error("Error rejecting premium:", error);
+    throw error;
+  }
+}
+
+// Approve user top-up request and credit their wallet balance
+export async function approveTopup(userId) {
+  try {
+    const userRef = doc(db, "users", userId);
+    const userSnap = await getDoc(userRef);
+    if (!userSnap.exists()) throw new Error("User does not exist.");
+    
+    const userData = userSnap.data();
+    if (userData.topupStatus !== "pending") throw new Error("No pending top-up request found.");
+    
+    const topupAmt = userData.topupAmount || 0;
+    const newBalance = parseFloat(((userData.walletBalance || 0) + topupAmt).toFixed(2));
+    
+    await updateDoc(userRef, {
+      walletBalance: newBalance,
+      topupStatus: "approved",
+      topupAmount: null,
+      topupTxid: null,
+      topupSlipUrl: null,
+      topupRequestedAt: null
+    });
+    
+    console.log(`Top-up of $${topupAmt} approved for user ${userId}. New balance: $${newBalance}`);
+  } catch (error) {
+    console.error("Error approving top-up:", error);
+    throw error;
+  }
+}
+
+// Reject/revoke top-up request
+export async function rejectTopup(userId) {
+  try {
+    const userRef = doc(db, "users", userId);
+    await updateDoc(userRef, {
+      topupStatus: "rejected",
+      topupAmount: null,
+      topupTxid: null,
+      topupSlipUrl: null,
+      topupRequestedAt: null
+    });
+    console.log(`Top-up request rejected for user ${userId}.`);
+  } catch (error) {
+    console.error("Error rejecting top-up:", error);
     throw error;
   }
 }
