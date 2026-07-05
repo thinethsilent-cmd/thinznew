@@ -1,66 +1,89 @@
 // ══════════════════════════════════════════════════════════════════════════════
-//  EMAIL NOTIFICATION SYSTEM  –  Powered by EmailJS (free, no backend needed)
-//  Setup: https://emailjs.com
-//  1. Create a free account at emailjs.com
-//  2. Add your Email Service (Gmail, Outlook, etc.)
-//  3. Create email templates for each notification type
-//  4. Replace the constants below with your actual IDs
+//  EMAIL SYSTEM  –  Powered by Firebase "Trigger Email from Firestore" Extension
+//
+//  Setup (one-time, ~5 minutes):
+//  1. Go to Firebase Console → Extensions
+//  2. Install "Trigger Email from Firestore"
+//  3. Connect your Gmail / SMTP / SendGrid account
+//  4. Set the collection name to:  mail
+//
+//  After setup, every document added to the "mail" Firestore collection
+//  is automatically sent as a real email by Firebase. No API keys needed here.
 // ══════════════════════════════════════════════════════════════════════════════
 
-// ── EmailJS Configuration ─────────────────────────────────────────────────────
-const EMAILJS_PUBLIC_KEY   = "YOUR_EMAILJS_PUBLIC_KEY";   // From EmailJS Dashboard → Account
-const EMAILJS_SERVICE_ID   = "YOUR_SERVICE_ID";            // From EmailJS → Email Services
-const EMAILJS_TEMPLATES = {
-  welcome:         "template_welcome",        // Sent on new user registration
-  vipActivated:    "template_vip_activated",  // Sent when VIP subscription activated
-  topupApproved:   "template_topup_approved", // Sent when admin approves top-up
-  paymentReceived: "template_payment_received" // Sent when user submits payment slip
-};
+import { db } from "./firebase-config.js";
+import { collection, addDoc } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
-// ── Load EmailJS SDK lazily (only once) ───────────────────────────────────────
-let emailJsReady = false;
-async function ensureEmailJsLoaded() {
-  if (emailJsReady) return true;
-  if (typeof window.emailjs !== "undefined") {
-    window.emailjs.init(EMAILJS_PUBLIC_KEY);
-    emailJsReady = true;
-    return true;
-  }
-  return new Promise((resolve) => {
-    const script = document.createElement("script");
-    script.src = "https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js";
-    script.onload = () => {
-      window.emailjs.init(EMAILJS_PUBLIC_KEY);
-      emailJsReady = true;
-      resolve(true);
-    };
-    script.onerror = () => {
-      console.warn("[Email] Failed to load EmailJS SDK.");
-      resolve(false);
-    };
-    document.head.appendChild(script);
-  });
-}
+const SITE_NAME   = "THINz Banda";
+const SITE_URL    = typeof window !== "undefined" ? window.location.origin : "";
+const FROM_NAME   = "THINz Banda";
+const REPLY_TO    = "noreply@thinzbanda.com"; // Change to your email address
 
-// ── Internal send helper ──────────────────────────────────────────────────────
-async function sendEmail(templateId, templateParams) {
-  try {
-    const ready = await ensureEmailJsLoaded();
-    if (!ready) return false;
-
-    // Guard: skip if not configured yet
-    if (EMAILJS_PUBLIC_KEY === "YOUR_EMAILJS_PUBLIC_KEY") {
-      console.log("[Email] EmailJS not configured yet. Skipping send.", { templateId, templateParams });
-      return false;
-    }
-
-    await window.emailjs.send(EMAILJS_SERVICE_ID, templateId, templateParams);
-    console.log(`[Email] ✅ Sent template: ${templateId} to ${templateParams.to_email}`);
-    return true;
-  } catch (err) {
-    console.error("[Email] Send failed:", err);
+// ── Internal helper ───────────────────────────────────────────────────────────
+async function sendMail(to, subject, htmlBody, replyTo = REPLY_TO) {
+  if (!to) {
+    console.warn("[Email] No recipient address — skipping.");
     return false;
   }
+  try {
+    await addDoc(collection(db, "mail"), {
+      to,
+      replyTo,
+      message: {
+        subject: `${subject} | ${SITE_NAME}`,
+        html: htmlBody,
+      },
+      createdAt: new Date().toISOString(),
+    });
+    console.log(`[Email] ✅ Queued: "${subject}" → ${to}`);
+    return true;
+  } catch (err) {
+    console.error("[Email] Failed to queue mail document:", err);
+    return false;
+  }
+}
+
+// ── Shared HTML wrapper ───────────────────────────────────────────────────────
+function wrapHtml(content) {
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body { margin:0; padding:0; background:#0a0e1e; font-family:'Segoe UI',Arial,sans-serif; color:#e2e8f0; }
+    .wrap { max-width:580px; margin:40px auto; background:#10172a; border:1px solid rgba(46,196,160,0.15); border-radius:16px; overflow:hidden; }
+    .header { background:linear-gradient(135deg,#0d1b2e,#0a1628); padding:32px 36px 24px; border-bottom:2px solid rgba(46,196,160,0.2); }
+    .logo { font-size:22px; font-weight:900; letter-spacing:-0.02em; color:#fff; }
+    .logo span { color:#2ec4a0; }
+    .body { padding:32px 36px; }
+    h2 { font-size:20px; font-weight:800; color:#fff; margin:0 0 12px; }
+    p { font-size:15px; line-height:1.7; color:#94a3b8; margin:0 0 16px; }
+    .highlight { background:rgba(46,196,160,0.08); border:1px solid rgba(46,196,160,0.2); border-radius:10px; padding:16px 20px; margin:20px 0; }
+    .highlight strong { color:#2ec4a0; font-size:16px; }
+    .btn { display:inline-block; background:linear-gradient(135deg,#2ec4a0,#00e676); color:#000; font-weight:800; text-decoration:none; padding:14px 28px; border-radius:10px; margin:8px 0; font-size:15px; }
+    .divider { border:none; border-top:1px solid rgba(255,255,255,0.06); margin:24px 0; }
+    .footer { background:#080e1c; padding:20px 36px; font-size:12px; color:#475569; border-top:1px solid rgba(255,255,255,0.04); text-align:center; }
+    .badge { display:inline-block; background:rgba(46,196,160,0.15); color:#2ec4a0; font-weight:700; font-size:12px; padding:4px 12px; border-radius:20px; text-transform:uppercase; letter-spacing:0.06em; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="header">
+      <div class="logo">THIN<span>z</span> <span style="color:#2ec4a0;">Banda</span></div>
+      <div style="font-size:12px;color:#64748b;margin-top:4px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;">Trading Signals & Auto-Trading</div>
+    </div>
+    <div class="body">
+      ${content}
+    </div>
+    <div class="footer">
+      © ${new Date().getFullYear()} ${SITE_NAME}. All rights reserved.<br>
+      You received this because you have an account on <a href="${SITE_URL}" style="color:#2ec4a0;">${SITE_URL || "THINz Banda"}</a>.
+    </div>
+  </div>
+</body>
+</html>`;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -69,65 +92,118 @@ async function sendEmail(templateId, templateParams) {
 
 /**
  * Welcome email – sent after a new user registers.
- * Template variables: {{to_name}}, {{to_email}}
  */
 export async function sendWelcomeEmail(user) {
   if (!user?.email) return;
-  return sendEmail(EMAILJS_TEMPLATES.welcome, {
-    to_name:  user.displayName || user.email.split("@")[0],
-    to_email: user.email,
-    site_name: "THINz Banda",
-    signals_url: `${window.location.origin}/signals.html`,
-    year: new Date().getFullYear()
-  });
+  const name = user.displayName || user.email.split("@")[0];
+  const html = wrapHtml(`
+    <h2>Welcome to ${SITE_NAME}, ${name}! 🎉</h2>
+    <p>Your account is ready. You now have access to free crypto trading signals powered by real-time market analysis.</p>
+    <div class="highlight">
+      <strong>What's included with your Free account:</strong><br>
+      <p style="margin:8px 0 0;">✅ Daily free signals &nbsp;•&nbsp; ✅ Signal history &nbsp;•&nbsp; ✅ Referral rewards</p>
+    </div>
+    <p>Upgrade to <strong style="color:#2ec4a0;">VIP Premium</strong> to unlock all signals, the auto-trading bot, and priority support.</p>
+    <a href="${SITE_URL}/signals.html" class="btn">View Live Signals →</a>
+    <hr class="divider">
+    <p style="font-size:13px;">Share your referral link to earn <strong style="color:#00e676;">$0.20</strong> for each friend who joins, plus <strong style="color:#2ec4a0;">15% commission</strong> on their VIP upgrades.</p>
+    <a href="${SITE_URL}/referrals.html" style="color:#2ec4a0;font-size:13px;">Get your referral link →</a>
+  `);
+  return sendMail(user.email, `Welcome to ${SITE_NAME}!`, html);
 }
 
 /**
- * VIP Activated email – sent when premium is approved or wallet checkout completes.
- * Template variables: {{to_name}}, {{to_email}}, {{plan_name}}, {{expires_at}}
+ * VIP Activated email – sent when premium is approved.
  */
 export async function sendVipActivationEmail(email, displayName, planName, expiresAt) {
   if (!email) return;
+  const name   = displayName || email.split("@")[0];
   const expiry = expiresAt
     ? new Date(expiresAt).toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })
-    : "Never (Lifetime)";
-  return sendEmail(EMAILJS_TEMPLATES.vipActivated, {
-    to_name:   displayName || email.split("@")[0],
-    to_email:  email,
-    plan_name: planName || "VIP Premium",
-    expires_at: expiry,
-    signals_url: `${window.location.origin}/signals.html`,
-    site_name: "THINz Banda"
-  });
+    : "Never (Lifetime Access)";
+  const html = wrapHtml(`
+    <div style="text-align:center;margin-bottom:24px;">
+      <span class="badge">⚡ VIP Premium Activated</span>
+    </div>
+    <h2>Congratulations, ${name}! Your VIP is Live 🚀</h2>
+    <p>Your <strong style="color:#2ec4a0;">${planName} Premium</strong> subscription has been activated successfully.</p>
+    <div class="highlight">
+      <strong>Plan:</strong> ${planName}<br>
+      <strong>Expires:</strong> ${expiry}<br>
+      <strong>Status:</strong> <span style="color:#00e676;">✅ Active</span>
+    </div>
+    <p>You now have full access to all VIP signals, the AI auto-trading bot, and priority features.</p>
+    <a href="${SITE_URL}/signals.html" class="btn">Access VIP Signals →</a>
+    <hr class="divider">
+    <p style="font-size:13px;color:#64748b;">Questions? Reply to this email or reach us via the platform.</p>
+  `);
+  return sendMail(email, `🔓 VIP Premium Activated – ${planName}`, html);
 }
 
 /**
  * Top-Up Approved email – sent when admin approves a wallet deposit.
- * Template variables: {{to_name}}, {{to_email}}, {{amount}}, {{new_balance}}
  */
 export async function sendTopupApprovedEmail(email, displayName, amount, newBalance) {
   if (!email) return;
-  return sendEmail(EMAILJS_TEMPLATES.topupApproved, {
-    to_name:     displayName || email.split("@")[0],
-    to_email:    email,
-    amount:      `$${parseFloat(amount).toFixed(2)}`,
-    new_balance: `$${parseFloat(newBalance).toFixed(2)}`,
-    topup_url:   `${window.location.origin}/topup.html`,
-    site_name:   "THINz Banda"
-  });
+  const name = displayName || email.split("@")[0];
+  const html = wrapHtml(`
+    <div style="text-align:center;margin-bottom:24px;">
+      <span class="badge">💰 Deposit Approved</span>
+    </div>
+    <h2>Your deposit has been credited, ${name}!</h2>
+    <p>Great news — your wallet top-up has been verified and credited to your account.</p>
+    <div class="highlight">
+      <strong>Amount Credited:</strong> <span style="color:#00e676;font-size:22px;font-weight:900;">$${parseFloat(amount).toFixed(2)}</span><br>
+      <strong>New Wallet Balance:</strong> <span style="color:#2ec4a0;font-weight:800;">$${parseFloat(newBalance).toFixed(2)}</span>
+    </div>
+    <p>You can use your balance to upgrade to VIP Premium or purchase individual signals.</p>
+    <a href="${SITE_URL}/topup.html" class="btn">View Wallet →</a>
+  `);
+  return sendMail(email, `💰 Wallet Top-Up Approved – $${parseFloat(amount).toFixed(2)}`, html);
 }
 
 /**
  * Payment Received email – sent when user submits a bank payment slip.
- * Template variables: {{to_name}}, {{to_email}}, {{plan_name}}, {{txid}}
  */
 export async function sendPaymentReceivedEmail(email, displayName, planName, txid) {
   if (!email) return;
-  return sendEmail(EMAILJS_TEMPLATES.paymentReceived, {
-    to_name:   displayName || email.split("@")[0],
-    to_email:  email,
-    plan_name: planName || "VIP Premium",
-    txid:      txid || "N/A",
-    site_name: "THINz Banda"
-  });
+  const name = displayName || email.split("@")[0];
+  const html = wrapHtml(`
+    <h2>Payment Received – Under Review</h2>
+    <p>Hi ${name}, we've received your payment details for the <strong style="color:#2ec4a0;">${planName || "VIP Premium"}</strong> plan.</p>
+    <div class="highlight">
+      <strong>Transaction Reference:</strong> <span style="font-family:monospace;color:#f59e0b;">${txid || "N/A"}</span><br>
+      <strong>Plan:</strong> ${planName || "VIP Premium"}<br>
+      <strong>Status:</strong> <span style="color:#f59e0b;">⏳ Under Review</span>
+    </div>
+    <p>Our team will verify your payment and activate your account within a few hours. You'll receive another email once it's confirmed.</p>
+    <hr class="divider">
+    <p style="font-size:13px;color:#64748b;">If you haven't made a payment, please ignore this email.</p>
+  `);
+  return sendMail(email, `Payment Received – Verifying ${planName || "VIP"}`, html);
+}
+
+/**
+ * Gift / Admin Message email – sent when admin gifts wallet balance or sends a message.
+ */
+export async function sendGiftEmail(email, displayName, subject, messageBody, giftAmount = 0) {
+  if (!email) return;
+  const name = displayName || email.split("@")[0];
+  const giftSection = giftAmount > 0 ? `
+    <div class="highlight" style="text-align:center;">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#64748b;margin-bottom:6px;">🎁 Wallet Gift</div>
+      <div style="font-size:32px;font-weight:900;color:#00e676;">+$${parseFloat(giftAmount).toFixed(2)}</div>
+      <div style="font-size:13px;color:#94a3b8;margin-top:4px;">Has been added to your wallet</div>
+    </div>` : "";
+  const html = wrapHtml(`
+    <div style="text-align:center;margin-bottom:24px;">
+      <span class="badge">📨 Message from Admin</span>
+    </div>
+    <h2>${subject}</h2>
+    <p>Hi ${name},</p>
+    <p>${messageBody.replace(/\n/g, "<br>")}</p>
+    ${giftSection}
+    <a href="${SITE_URL}/index.html" class="btn">Open App →</a>
+  `);
+  return sendMail(email, subject, html);
 }
