@@ -1474,8 +1474,11 @@ export function loadAdminPage() {
   const signalsTable = document.getElementById('admin-signals-table');
   if (!pendingList || !userList || !signalsTable) return;
 
+  let currentUsersList = [];
+
   // Users & pending payments
   activeUnsubscribes.users = subscribeToAllUsers(users => {
+    currentUsersList = users;
     // Clear containers
     pendingList.innerHTML = '';
     userList.innerHTML = '';
@@ -1661,13 +1664,7 @@ export function loadAdminPage() {
 
         // Fetch users dynamically from current local cache in subscribeToAllUsers
         const { sendAdminMessage } = await import("./messages.js");
-        const currentUsersSnapshot = [];
-        const userRows = document.getElementById("admin-users-list").querySelectorAll("tr");
         
-        // Since we are inside the closure where 'users' of subscribeToAllUsers was bound, 
-        // we can safely query the 'users' variable directly!
-        const usersListRef = typeof users !== "undefined" ? users : [];
-
         const res = await sendAdminMessage({
           targetUserId: targetVal,
           targetEmail,
@@ -1675,7 +1672,7 @@ export function loadAdminPage() {
           subject,
           body,
           giftAmount: giftVal,
-          allUsers: usersListRef
+          allUsers: currentUsersList
         });
 
         if (statusEl) {
