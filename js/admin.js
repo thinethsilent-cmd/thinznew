@@ -6,8 +6,10 @@ import {
   doc, 
   updateDoc,
   getDocs,
-  getDoc
+  getDoc,
+  where
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+import { sendVipActivationEmail, sendTopupApprovedEmail } from "./email.js";
 
 // Calculate expiry date based on plan name
 function getPlanExpiryDate(planName) {
@@ -100,6 +102,13 @@ export async function approvePremium(userId, planName = "1 Month") {
 
     await updateDoc(userRef, updateData);
     console.log(`User ${userId} approved: Plan "${finalPlan}", expires: ${expiresAt || "Never"}`);
+
+    // Send VIP Premium Activated Email notification
+    try {
+      await sendVipActivationEmail(userData.email, userData.displayName, finalPlan, expiresAt);
+    } catch (mailErr) {
+      console.error("Failed to send VIP activation email:", mailErr);
+    }
   } catch (error) {
     console.error("Error approving premium:", error);
     throw error;
@@ -146,6 +155,27 @@ export async function approveTopup(userId) {
     });
     
     console.log(`Top-up of $${topupAmt} approved for user ${userId}. New balance: $${newBalance}`);
+
+    // Update matching pending records in deposits history collection
+    try {
+      const depQuery = query(collection(db, "deposits"), where("userId", "==", userId), where("status", "==", "pending"));
+      const depSnap = await getDocs(depQuery);
+      for (const depDoc of depSnap.docs) {
+        await updateDoc(doc(db, "deposits", depDoc.id), {
+          status: "approved",
+          approvedAt: new Date().toISOString()
+        });
+      }
+    } catch (depErr) {
+      console.error("Error updating deposit collection status in approveTopup:", depErr);
+    }
+
+    // Trigger Top-Up Approved email notification
+    try {
+      await sendTopupApprovedEmail(userData.email, userData.displayName, topupAmt, newBalance);
+    } catch (mailErr) {
+      console.error("Failed to send topup approval email:", mailErr);
+    }
   } catch (error) {
     console.error("Error approving top-up:", error);
     throw error;
@@ -164,6 +194,20 @@ export async function rejectTopup(userId) {
       topupRequestedAt: null
     });
     console.log(`Top-up request rejected for user ${userId}.`);
+
+    // Update matching pending records in deposits history collection
+    try {
+      const depQuery = query(collection(db, "deposits"), where("userId", "==", userId), where("status", "==", "pending"));
+      const depSnap = await getDocs(depQuery);
+      for (const depDoc of depSnap.docs) {
+        await updateDoc(doc(db, "deposits", depDoc.id), {
+          status: "rejected",
+          rejectedAt: new Date().toISOString()
+        });
+      }
+    } catch (depErr) {
+      console.error("Error updating deposit collection status in rejectTopup:", depErr);
+    }
   } catch (error) {
     console.error("Error rejecting top-up:", error);
     throw error;

@@ -122,7 +122,7 @@ function initRouter() {
     }
 
     if (adminRequired && (!state.profile || state.profile.role !== "admin")) {
-      window.location.hash = "#dashboard"; // redirect to signals if not admin
+      window.location.hash = "#signals"; // redirect to signals if not admin
       return;
     }
 
@@ -248,7 +248,7 @@ function initAuthListeners() {
     } else {
       // User logged out
       authLinks.forEach(el => el.classList.add("hidden"));
-      guestLinks.forEach(el => el.classList.add("hidden"));
+      guestLinks.forEach(el => el.classList.remove("hidden"));
       profileSection.classList.add("hidden");
       adminLink.classList.add("hidden");
 

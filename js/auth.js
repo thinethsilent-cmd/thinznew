@@ -9,6 +9,7 @@ import {
   signInWithPopup
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 import { doc, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+import { sendWelcomeEmail } from "./email.js";
 
 // Check if user is logged in and listen for state changes
 export function observeAuthState(callback) {
@@ -103,6 +104,9 @@ export async function signUp(email, password, displayName, referredBy = null) {
       console.error("Firestore write failed:", fsError);
       throw new Error("Account created, but Firestore database is offline. Please make sure you have clicked 'Create Database' in your Firebase Console under 'Firestore Database'.");
     }
+
+    // Trigger welcome email asynchronously
+    sendWelcomeEmail(userData).catch(err => console.error("Error sending welcome email:", err));
     
     return { user, userData };
   } catch (error) {
@@ -224,6 +228,9 @@ export async function signInWithGoogle(referredBy = null) {
         console.error("Firestore write failed:", fsError);
         throw new Error("Google Login succeeded, but failed to write profile doc because Firestore is offline. Verify that your database is created in the Firebase Console.");
       }
+
+      // Send welcome email for new Google registration
+      sendWelcomeEmail(userData).catch(err => console.error("Error sending welcome email:", err));
     } else {
       userData = docSnap.data();
     }

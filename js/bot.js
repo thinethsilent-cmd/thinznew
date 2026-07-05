@@ -34,9 +34,9 @@ export async function saveApiKeys(userId, apiKey, apiSecret) {
 export async function getApiKeys(userId) {
   try {
     const userRef = doc(db, "users", userId);
-    const userSnap = await getDocs(query(collection(db, "users"), where("uid", "==", userId)));
-    if (!userSnap.empty) {
-      return userSnap.docs[0].data().binanceApi || null;
+    const userSnap = await getDoc(userRef);
+    if (userSnap.exists()) {
+      return userSnap.data().binanceApi || null;
     }
     return null;
   } catch (error) {
@@ -218,8 +218,6 @@ export function startAutoTrading(userId, premiumStatus, onTradeLogged) {
         
         const isWin = Math.random() < 0.97; // 97% High Accuracy Win rate
         const result = isWin ? "Win" : "Loss";
-        // Weighted random: win more often on strong signals
-        const winBias = Math.random() < 0.97;
         
         const closeInfo = await closeTrade(userId, trade.id, result);
         if (onTradeLogged) {

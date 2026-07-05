@@ -1359,7 +1359,7 @@ export function loadAccountPage() {
             tr.innerHTML = `
               <td class="py-3 px-4 text-white font-medium">${nameDisplay}</td>
               <td class="py-3 px-4 text-gray">${joinedDate}</td>
-              <td class="py-3 px-4"><span class="badge-${badgeClass}">${statusLabel}</span></td>
+              <td class="py-3 px-4"><span class="${badgeClass}">${statusLabel}</span></td>
               <td class="py-3 px-4 ${isProcessed ? 'text-green font-medium' : 'text-gray'}">${isProcessed ? `✅ $${((state.profile?.totalReferralEarnings || 0) > 0 ? '15% comm.' : '$0.20 credited')}` : '—'}</td>
             `;
             historyList.appendChild(tr);
@@ -1593,7 +1593,7 @@ function addBotLog(msg) {
   // Color-code log entries
   let cssClass = 'log-info';
   const lowerText = msg.toLowerCase();
-  if (lowerText.includes('win') || lowerText.includes('take-profit') || lowerText.includes('closed') && lowerText.includes('win')) cssClass = 'log-success';
+  if (lowerText.includes('win') || lowerText.includes('take-profit') || (lowerText.includes('closed') && lowerText.includes('win'))) cssClass = 'log-success';
   else if (lowerText.includes('loss') || lowerText.includes('stop-loss') || lowerText.includes('error')) cssClass = 'log-error';
   else if (lowerText.includes('executing') || lowerText.includes('executed') || lowerText.includes('opened') || lowerText.includes('auto-trading')) cssClass = 'log-warn';
   else if (lowerText.includes('system') || lowerText.includes('initialized') || lowerText.includes('started') || lowerText.includes('analysis')) cssClass = 'log-system';
@@ -1646,3 +1646,373 @@ export function initMobileMenu() {
 }
 
 // End of common.js
+
+// ------------------------------------------------------------------
+// Referrals Page Loader
+export function loadReferralsPage() {
+  const guard   = document.getElementById("auth-guard-notice");
+  const content = document.getElementById("referrals-content");
+  if (!guard || !content) return;
+
+  // Poll until auth state resolves
+  const tryLoad = () => {
+    if (state.user && state.profile) {
+      guard.classList.add("hidden");
+      content.classList.remove("hidden");
+      _setupReferralsUI();
+    } else if (state.user === null && state.profile === null) {
+      // Unauthenticated
+      guard.classList.remove("hidden");
+      content.classList.add("hidden");
+    } else {
+      // Still resolving
+      setTimeout(tryLoad, 200);
+    }
+  };
+  tryLoad();
+}
+
+function _setupReferralsUI() {
+  // Referral link input
+  const refLinkInput = document.getElementById("referral-link-input");
+  if (refLinkInput && state.user) {
+    const origin = window.location.origin;
+    const path   = window.location.pathname.replace(/\/[^/]*$/, "");
+    refLinkInput.value = `${origin}${path}/index.html?ref=${state.user.uid}`;
+  }
+
+  // Copy button
+  const copyBtn = document.getElementById("btn-copy-ref");
+  const copyMsg = document.getElementById("copy-ref-msg");
+  if (copyBtn && !copyBtn.dataset.listenerWired) {
+    copyBtn.dataset.listenerWired = "true";
+    copyBtn.addEventListener("click", () => {
+      if (!refLinkInput) return;
+      refLinkInput.select();
+      navigator.clipboard.writeText(refLinkInput.value)
+        .then(() => {
+          copyBtn.textContent = "✓ Copied!";
+          if (copyMsg) { copyMsg.textContent = "Referral link copied to clipboard!"; copyMsg.style.color = "var(--color-buy)"; }
+          setTimeout(() => {
+            copyBtn.innerHTML = `<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg> Copy Link`;
+            if (copyMsg) copyMsg.textContent = "";
+          }, 2200);
+        })
+        .catch(() => { if (copyMsg) copyMsg.textContent = "Copy failed. Please copy manually."; });
+    });
+  }
+
+  // Social sharing buttons
+  const shareUrl = encodeURIComponent(refLinkInput?.value || "");
+  const shareMsg = encodeURIComponent("Join THINz Banda – Get free crypto signals & AI auto-trading. Use my referral link:");
+  const waBtn  = document.getElementById("share-whatsapp");
+  const tgBtn  = document.getElementById("share-telegram");
+  const twBtn  = document.getElementById("share-twitter");
+  if (waBtn) waBtn.onclick = () => window.open(`https://wa.me/?text=${shareMsg}%20${shareUrl}`, "_blank");
+  if (tgBtn) tgBtn.onclick = () => window.open(`https://t.me/share/url?url=${shareUrl}&text=${shareMsg}`, "_blank");
+  if (twBtn) twBtn.onclick = () => window.open(`https://twitter.com/intent/tweet?text=${shareMsg}%20${shareUrl}`, "_blank");
+
+  // Referral stats
+  const totalEl      = document.getElementById("ref-count-total");
+  const successfulEl = document.getElementById("ref-count-successful");
+  const earnedEl     = document.getElementById("ref-total-earned");
+  const historyList  = document.getElementById("referral-history-list");
+
+  const earned = state.profile?.totalReferralEarnings || 0;
+  if (earnedEl) earnedEl.textContent = `$${earned.toFixed(2)}`;
+
+  // Update hero earned card
+  const heroEarned = document.querySelector(".ref-earn-card .ref-stat-value");
+  if (heroEarned) heroEarned.textContent = `$${earned.toFixed(2)}`;
+
+  // Load referral history from Firestore
+  if (historyList && state.user) {
+    historyList.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-gray">Loading referrals...</td></tr>`;
+    const referralsQuery = query(collection(db, "users"), where("referredBy", "==", state.user.uid));
+    getDocs(referralsQuery)
+      .then(snapshot => {
+        historyList.innerHTML = "";
+        let invited = snapshot.size;
+        let successful = 0;
+        if (invited === 0) {
+          historyList.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-gray">No referrals yet. Share your link to start earning!</td></tr>`;
+        } else {
+          snapshot.forEach(docSnap => {
+            const u = docSnap.data();
+            if (u.referralBonusProcessed) successful++;
+            const name = _maskName(u.displayName || u.email);
+            const joined = u.createdAt ? new Date(u.createdAt).toLocaleDateString("en-GB") : "—";
+            let badgeClass = "badge-free", statusLabel = "Registered (Free)";
+            if (u.premiumStatus === "paid")     { badgeClass = "badge-vip";     statusLabel = "VIP Premium"; }
+            else if (u.premiumStatus === "pending") { badgeClass = "badge-pending"; statusLabel = "Pending VIP"; }
+            else if (u.premiumStatus === "expired") { badgeClass = "badge-expired"; statusLabel = "VIP Expired"; }
+            const bonus = u.referralBonusProcessed ? `<span class="text-green font-medium">✅ Credited</span>` : `<span class="text-gray">—</span>`;
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+              <td class="py-3 px-4 text-white font-medium">${name}</td>
+              <td class="py-3 px-4 text-gray">${joined}</td>
+              <td class="py-3 px-4"><span class="${badgeClass}">${statusLabel}</span></td>
+              <td class="py-3 px-4">${bonus}</td>
+            `;
+            historyList.appendChild(tr);
+          });
+        }
+        if (totalEl)      totalEl.textContent      = invited;
+        if (successfulEl) successfulEl.textContent  = successful;
+      })
+      .catch(() => {
+        historyList.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-red">Error loading referrals.</td></tr>`;
+      });
+  }
+}
+
+function _maskName(str) {
+  if (!str) return "User";
+  if (str.includes("@")) {
+    const [local, domain] = str.split("@");
+    return `${local.length <= 3 ? local[0] : local.slice(0, 3)}***@${domain}`;
+  }
+  return str.length <= 3 ? str : `${str.slice(0, 2)}***${str.slice(-1)}`;
+}
+
+// ------------------------------------------------------------------
+// Top-Up / Wallet Page Loader
+export function loadTopupPage() {
+  const guard   = document.getElementById("auth-guard-notice");
+  const content = document.getElementById("topup-content");
+  if (!guard || !content) return;
+
+  const tryLoad = () => {
+    if (state.user && state.profile) {
+      guard.classList.add("hidden");
+      content.classList.remove("hidden");
+      _setupTopupUI();
+    } else if (state.user === null && state.profile === null) {
+      guard.classList.remove("hidden");
+      content.classList.add("hidden");
+    } else {
+      setTimeout(tryLoad, 200);
+    }
+  };
+  tryLoad();
+}
+
+function _setupTopupUI() {
+  // Wallet balance displays
+  const balance = state.profile?.walletBalance || 0;
+  const heroBal  = document.getElementById("wallet-balance-display");
+  const sideBal  = document.getElementById("wallet-balance-display-2");
+  const refEarned = document.getElementById("wallet-ref-earned");
+  if (heroBal) heroBal.textContent = `$${balance.toFixed(2)}`;
+  if (sideBal) sideBal.textContent = `$${balance.toFixed(2)}`;
+  if (refEarned) refEarned.textContent = `$${(state.profile?.totalReferralEarnings || 0).toFixed(2)}`;
+
+  // Pending top-up notice
+  const pendingNotice  = document.getElementById("active-topup-notice");
+  const pendingAmtText = document.getElementById("pending-topup-amount-text");
+  if (pendingNotice && pendingAmtText) {
+    if (state.profile?.topupStatus === "pending") {
+      pendingNotice.classList.remove("hidden");
+      pendingAmtText.textContent = `$${(state.profile.topupAmount || 0).toFixed(2)}`;
+    } else {
+      pendingNotice.classList.add("hidden");
+    }
+  }
+
+  // Compute total deposited from profile (simple approximation)
+  const totalDep = document.getElementById("wallet-total-deposited");
+  if (totalDep) totalDep.textContent = `$${(state.profile?.lifetimeDeposited || balance).toFixed(2)}`;
+
+  // USD → LKR conversion preview
+  const usdInput = document.getElementById("deposit-amount-usd");
+  const lkrOut   = document.getElementById("deposit-amount-lkr");
+  const usdPreview = document.getElementById("deposit-usd-preview");
+  if (usdInput) {
+    usdInput.addEventListener("input", () => {
+      const val = parseFloat(usdInput.value) || 0;
+      if (lkrOut)    lkrOut.textContent    = `Rs. ${Math.round(val * 300).toLocaleString()}/=`;
+      if (usdPreview) usdPreview.textContent = `$${val.toFixed(2)}`;
+    });
+  }
+
+  // Drag-and-drop zone
+  const dropZone  = document.getElementById("deposit-drop-zone");
+  const fileInput = document.getElementById("deposit-slip");
+  const dropLabel = document.getElementById("drop-label");
+  const dropName  = document.getElementById("drop-file-name");
+  if (dropZone && fileInput) {
+    dropZone.addEventListener("dragover",  e => { e.preventDefault(); dropZone.classList.add("drag-over"); });
+    dropZone.addEventListener("dragleave", ()  => dropZone.classList.remove("drag-over"));
+    dropZone.addEventListener("drop", e => {
+      e.preventDefault();
+      dropZone.classList.remove("drag-over");
+      if (e.dataTransfer.files.length) {
+        fileInput.files = e.dataTransfer.files;
+        _updateDropZonePreview(e.dataTransfer.files[0], dropLabel, dropName);
+      }
+    });
+    fileInput.addEventListener("change", () => {
+      if (fileInput.files.length) _updateDropZonePreview(fileInput.files[0], dropLabel, dropName);
+    });
+  }
+
+  // Wallet deposit form submit
+  const depositForm = document.getElementById("wallet-deposit-form");
+  if (depositForm && !depositForm.dataset.listenerWired) {
+    depositForm.dataset.listenerWired = "true";
+    depositForm.addEventListener("submit", async e => {
+      e.preventDefault();
+      if (!state.user) return;
+
+      const usdAmount = parseFloat(document.getElementById("deposit-amount-usd")?.value);
+      const txid      = document.getElementById("deposit-txid")?.value.trim();
+      const msgEl     = document.getElementById("deposit-msg");
+      const submitBtn = document.getElementById("btn-submit-deposit");
+      const progressWrap = document.getElementById("deposit-upload-progress-wrap");
+      const progressBar  = document.getElementById("deposit-upload-progress-bar");
+      const progressPct  = document.getElementById("deposit-upload-progress-pct");
+
+      const setProgress = pct => {
+        if (progressBar) progressBar.style.width = pct + "%";
+        if (progressPct) progressPct.textContent  = pct + "%";
+      };
+
+      if (isNaN(usdAmount) || usdAmount <= 0) {
+        if (msgEl) { msgEl.className = "status-message text-red"; msgEl.textContent = "Please enter a valid USD amount."; }
+        return;
+      }
+      if (!txid) {
+        if (msgEl) { msgEl.className = "status-message text-red"; msgEl.textContent = "Please enter the transaction reference ID."; }
+        return;
+      }
+
+      if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "Submitting..."; }
+      if (msgEl) { msgEl.className = "status-message text-yellow"; msgEl.textContent = "Uploading receipt slip..."; }
+
+      let slipUrl = null;
+      try {
+        const fInput = document.getElementById("deposit-slip");
+        if (fInput && fInput.files.length > 0) {
+          const file = fInput.files[0];
+          if (progressWrap) progressWrap.classList.remove("hidden");
+          setProgress(0);
+          const storageRef = ref(storage, `deposit_slips/${state.user.uid}/${Date.now()}_${file.name}`);
+          const uploadTask = uploadBytesResumable(storageRef, file);
+          slipUrl = await new Promise((resolve, reject) => {
+            const tid = setTimeout(() => reject(new Error("Upload timed out.")), 8000);
+            uploadTask.on("state_changed",
+              snap => { const pct = Math.round((snap.bytesTransferred / snap.totalBytes) * 100); setProgress(isNaN(pct) ? 0 : pct); },
+              err  => { clearTimeout(tid); reject(err); },
+              async () => { clearTimeout(tid); setProgress(100); const url = await getDownloadURL(uploadTask.snapshot.ref); resolve(url); }
+            );
+          });
+          await new Promise(r => setTimeout(r, 500));
+        }
+      } catch (uploadErr) {
+        console.error("Slip upload failed:", uploadErr);
+        if (msgEl) { msgEl.className = "status-message text-red"; msgEl.textContent = `Receipt upload failed: ${uploadErr.message}`; }
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Submit Top-Up Request`; }
+        if (progressWrap) progressWrap.classList.add("hidden");
+        return;
+      } finally {
+        if (progressWrap) progressWrap.classList.add("hidden");
+        setProgress(0);
+      }
+
+      // Save to Firestore user doc (for admin panel)
+      try {
+        const userRef = doc(db, "users", state.user.uid);
+        await updateDoc(userRef, {
+          topupStatus: "pending",
+          topupAmount: usdAmount,
+          topupTxid: txid,
+          topupSlipUrl: slipUrl,
+          topupRequestedAt: new Date().toISOString()
+        });
+
+        // Also write a record to the deposits history collection
+        const { addDoc } = await import("https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js");
+        await addDoc(collection(db, "deposits"), {
+          userId:      state.user.uid,
+          userEmail:   state.user.email,
+          displayName: state.profile?.displayName || "",
+          amount:      usdAmount,
+          txid:        txid,
+          slipUrl:     slipUrl,
+          status:      "pending",
+          requestedAt: new Date().toISOString()
+        });
+
+        if (state.profile) { state.profile.topupStatus = "pending"; state.profile.topupAmount = usdAmount; }
+
+        if (msgEl) { msgEl.className = "status-message text-green"; msgEl.textContent = "✅ Top-Up request submitted! Wallet will be credited after admin review."; }
+        depositForm.reset();
+        if (lkrOut)    lkrOut.textContent    = "Rs. 0/=";
+        if (usdPreview) usdPreview.textContent = "$0.00";
+
+        // Refresh pending notice
+        const pendingNotice2  = document.getElementById("active-topup-notice");
+        const pendingAmtText2 = document.getElementById("pending-topup-amount-text");
+        if (pendingNotice2)  pendingNotice2.classList.remove("hidden");
+        if (pendingAmtText2) pendingAmtText2.textContent = `$${usdAmount.toFixed(2)}`;
+
+        // Reload deposit history
+        _loadDepositHistory();
+      } catch (err) {
+        console.error("Deposit submission error:", err);
+        if (msgEl) { msgEl.className = "status-message text-red"; msgEl.textContent = "Error: " + err.message; }
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Submit Top-Up Request`;
+        }
+      }
+    });
+  }
+
+  // Load deposit history table
+  _loadDepositHistory();
+}
+
+function _updateDropZonePreview(file, labelEl, nameEl) {
+  if (labelEl) labelEl.innerHTML = `<strong style="color:var(--color-primary);">✓ File selected</strong>`;
+  if (nameEl)  nameEl.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+}
+
+function _loadDepositHistory() {
+  const historyTbody = document.getElementById("deposit-history-list");
+  if (!historyTbody || !state.user) return;
+  historyTbody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-gray">Loading...</td></tr>`;
+  const depQuery = query(
+    collection(db, "deposits"),
+    where("userId", "==", state.user.uid)
+  );
+  getDocs(depQuery)
+    .then(snap => {
+      historyTbody.innerHTML = "";
+      if (snap.empty) {
+        historyTbody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-gray">No deposits yet.</td></tr>`;
+        return;
+      }
+      const deposits = [];
+      snap.forEach(d => deposits.push({ id: d.id, ...d.data() }));
+      // Sort newest first
+      deposits.sort((a, b) => new Date(b.requestedAt) - new Date(a.requestedAt));
+      deposits.forEach(dep => {
+        const date = new Date(dep.requestedAt).toLocaleDateString("en-GB");
+        const statusClass = dep.status === "approved" ? "badge-vip" : dep.status === "rejected" ? "badge-expired" : "badge-pending";
+        const statusLabel = dep.status === "approved" ? "Approved" : dep.status === "rejected" ? "Rejected" : "Pending";
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="py-3 px-4 text-gray">${date}</td>
+          <td class="py-3 px-4 text-white font-mono font-medium">$${(dep.amount || 0).toFixed(2)}</td>
+          <td class="py-3 px-4"><span class="${statusClass}">${statusLabel}</span></td>
+          <td class="py-3 px-4 text-gray font-mono" style="font-size:0.8rem;">${(dep.txid || "—").substring(0, 14)}…</td>
+        `;
+        historyTbody.appendChild(tr);
+      });
+    })
+    .catch(() => {
+      historyTbody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-red">Error loading history.</td></tr>`;
+    });
+}
