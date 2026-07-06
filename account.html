@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PRIME METRIX Trading | Account &amp; VIP Upgrade</title>
+  <meta name="description" content="Upgrade to VIP Premium, manage your wallet, referrals, and subscription plan on PRIME METRIX Trading.">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="stylesheet" href="css/style.css?v=5" />
+  <script>
+    document.addEventListener("contextmenu", (e) => e.preventDefault());
+    document.addEventListener("keydown", (e) => {
+      if (
+        e.key === "F12" ||
+        (e.ctrlKey && e.key.toLowerCase() === "u") ||
+        (e.ctrlKey && e.shiftKey && ["i","c","j"].includes(e.key.toLowerCase())) ||
+        (e.ctrlKey && e.key.toLowerCase() === "s")
+      ) { e.preventDefault(); return false; }
+    });
+  </script>
+</head>
+<body>
+
+  <!-- Global Loader -->
+  <div id="global-loader" class="loader-overlay hidden">
+    <div class="spinner"></div>
+    <p>Loading...</p>
+  </div>
+
+  <!-- Slip Image Modal -->
+  <div id="slip-modal" class="loader-overlay hidden" onclick="closeSlipModal()" style="cursor: zoom-out;">
+    <img id="slip-modal-img" src="" alt="Payment Slip"
+      style="max-width: 90vw; max-height: 85vh; border-radius: 12px; box-shadow: 0 0 40px rgba(0,0,0,0.8); object-fit: contain;" />
+  </div>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="container nav-wrapper">
+      <a href="home.html" class="logo">
+        <span class="logo-txt-white">PRIME</span>
+        <span class="logo-txt-primary">METRIX</span>
+      </a>
+
+      <button class="menu-toggle" id="mobile-menu-toggle" aria-label="Toggle Menu">
+        <span class="hamburger-bar"></span>
+        <span class="hamburger-bar"></span>
+        <span class="hamburger-bar"></span>
+      </button>
+
+      <div class="nav-menu-container" id="nav-menu-container">
+        <nav>
+          <ul class="nav-links">
+            <li><a href="home.html">Home</a></li>
+            <li class="auth-link"><a href="signals.html">Signals</a></li>
+            <li class="auth-link"><a href="bot.html">Auto-Trading Bot</a></li>
+            <li class="auth-link"><a href="account.html" class="active">Account</a></li>
+            <li class="auth-link"><a href="referrals.html">Referrals</a></li>
+            <li class="auth-link"><a href="topup.html">Wallet</a></li>
+            <li class="auth-link hidden" id="nav-admin-link"><a href="admin.html" class="text-yellow">Admin Panel</a></li>
+          </ul>
+        </nav>
+        <div class="nav-actions">
+          <a href="https://www.youtube.com/@PrimeMetrixTrading" target="_blank" rel="noopener" class="nav-yt-link" title="Watch PRIME METRIX Trading on YouTube">
+            <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.11C19.517 3.545 12 3.545 12 3.545s-7.516 0-9.387.507a3.003 3.003 0 0 0-2.11 2.11C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 0 0 2.11 2.11c1.871.507 9.388.507 9.388.507s7.518 0 9.388-.507a3.003 3.003 0 0 0 2.11-2.11C24 15.967 24 12 24 12s0-3.967-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+          </a>
+          <a href="auth.html" class="btn btn-secondary btn-sm guest-link" id="nav-login-btn">Sign In</a>
+          <a href="auth.html" class="btn btn-primary btn-sm guest-link" id="nav-signup-btn">Start Free</a>
+          <div id="nav-profile" class="profile-nav-box hidden">
+            <span id="nav-wallet-balance" class="plan-badge" style="background:rgba(46,196,160,0.15);color:var(--color-primary);border:1px solid rgba(46,196,160,0.25);font-family:'JetBrains Mono',monospace;font-weight:700;text-transform:none;">$0.00</span>
+            <span id="nav-premium-badge" class="plan-badge badge-free">Free Tier</span>
+            <!-- Inbox Bell -->
+            <button id="nav-inbox-btn" class="inbox-bell-btn" title="Messages &amp; Inbox" onclick="window.__openInbox && window.__openInbox()" style="position:relative;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:6px 8px;cursor:pointer;display:flex;align-items:center;transition:background 0.2s;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+              <span id="inbox-unread-badge" class="inbox-unread-badge hidden">0</span>
+            </button>
+            <span id="nav-profile-name" class="text-white font-medium">Username</span>
+            <a href="#" class="btn btn-secondary btn-xs text-red" id="btn-logout">Logout</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Auth guard notice (shown if not logged in) -->
+  <div id="auth-guard-notice" class="hidden" style="text-align:center;padding:80px 24px;">
+    <div style="max-width:440px;margin:0 auto;background:rgba(255,255,255,0.02);border:1px solid var(--border-color);border-radius:20px;padding:40px 32px;">
+      <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" style="margin-bottom:20px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <h2 style="font-size:1.8rem;font-weight:800;margin-bottom:12px;">Sign In to Access Account</h2>
+      <p class="text-gray" style="margin-bottom:28px;">Create an account or sign in to manage your subscription and wallet.</p>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+        <a href="auth.html" class="btn btn-primary">Sign In / Sign Up</a>
+        <a href="home.html" class="btn btn-secondary">Back to Home</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Account Content -->
+  <section id="page-account" style="padding: 40px 0 60px;">
+    <div class="container">
+      <!-- 1. Normal Upgrade view -->
+      <div id="account-normal-panel" class="pricing-wrapper text-center">
+
+        <!-- Expired notice banner (hidden by default) -->
+        <div id="expired-notice-banner" class="hidden"
+          style="background: rgba(255,51,102,0.08); border: 1px solid rgba(255,51,102,0.35); border-radius: 12px; padding: 16px 22px; margin-bottom: 28px; text-align: center;">
+          <div style="font-size:1.2rem; font-weight:800; color:#ff3366; margin-bottom:6px;">⚠️ Your VIP Membership Has Expired</div>
+          <p style="color:var(--text-secondary); font-size:0.9rem; margin:0;">Your access has been downgraded. Renew your plan below to restore VIP Premium signals and Auto-Trading Bot access.</p>
+        </div>
+
+        <h2 style="font-size: 2.2rem; font-weight: 800; margin-bottom: 10px;">Upgrade to VIP Premium</h2>
+        <p class="text-gray" style="margin-bottom: 40px;">Gain full access to all signals and activate our AI auto-trading bot. Choose your plan below.</p>
+
+        <!-- 5 Pricing Plan Cards -->
+        <div id="plan-grid"
+          style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px; margin-bottom: 36px; text-align: left;">
+
+          <!-- 7 Days -->
+          <div class="plan-card" data-plan="7 Days" data-price="1,500" onclick="selectPlan(this)"
+            style="border:2px solid var(--border-color); border-radius:14px; padding:22px 18px; cursor:pointer; transition:all .25s; position:relative;">
+            <div style="font-size:0.72rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.08em; margin-bottom:6px;">7 Days</div>
+            <div style="font-size:1.9rem; font-weight:900; color:#fff; line-height:1;">Rs. 1,500<span style="font-size:0.8rem; font-weight:500; color:var(--text-muted);">/=</span></div>
+            <div style="margin-top:12px; font-size:0.8rem; color:var(--text-muted);">Try it out</div>
+          </div>
+
+          <!-- 2 Weeks -->
+          <div class="plan-card" data-plan="2 Weeks" data-price="2,900" onclick="selectPlan(this)"
+            style="border:2px solid var(--border-color); border-radius:14px; padding:22px 18px; cursor:pointer; transition:all .25s; position:relative;">
+            <div style="font-size:0.72rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.08em; margin-bottom:6px;">2 Weeks</div>
+            <div style="font-size:1.9rem; font-weight:900; color:#fff; line-height:1;">Rs. 2,900<span style="font-size:0.8rem; font-weight:500; color:var(--text-muted);">/=</span></div>
+            <div style="margin-top:12px; font-size:0.8rem; color:var(--text-muted);">Great starter</div>
+          </div>
+
+          <!-- 1 Month (Most Popular) -->
+          <div class="plan-card plan-popular" data-plan="1 Month" data-price="5,000" onclick="selectPlan(this)"
+            style="border:2px solid var(--color-primary); border-radius:14px; padding:22px 18px; cursor:pointer; transition:all .25s; position:relative; background: rgba(255,198,0,0.05);">
+            <div style="position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:var(--color-primary); color:#000; font-size:0.65rem; font-weight:900; padding:3px 12px; border-radius:20px; letter-spacing:.08em; white-space:nowrap;">⭐ MOST POPULAR</div>
+            <div style="font-size:0.72rem; font-weight:700; color:var(--color-primary); text-transform:uppercase; letter-spacing:.08em; margin-bottom:6px;">1 Month</div>
+            <div style="font-size:1.9rem; font-weight:900; color:#fff; line-height:1;">Rs. 5,000<span style="font-size:0.8rem; font-weight:500; color:var(--text-muted);">/=</span></div>
+            <div style="margin-top:12px; font-size:0.8rem; color:var(--text-muted);">Best value</div>
+          </div>
+
+          <!-- 3 Months -->
+          <div class="plan-card" data-plan="3 Months" data-price="11,000" onclick="selectPlan(this)"
+            style="border:2px solid var(--border-color); border-radius:14px; padding:22px 18px; cursor:pointer; transition:all .25s; position:relative;">
+            <div style="font-size:0.72rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.08em; margin-bottom:6px;">3 Months</div>
+            <div style="font-size:1.9rem; font-weight:900; color:#fff; line-height:1;">Rs. 11,000<span style="font-size:0.8rem; font-weight:500; color:var(--text-muted);">/=</span></div>
+            <div style="margin-top:12px; font-size:0.8rem; color:var(--color-buy);">Save Rs. 4,000</div>
+          </div>
+
+          <!-- Lifetime -->
+          <div class="plan-card plan-lifetime" data-plan="Lifetime" data-price="20,000" onclick="selectPlan(this)"
+            style="border:2px solid #a78bfa; border-radius:14px; padding:22px 18px; cursor:pointer; transition:all .25s; position:relative; background: rgba(167,139,250,0.05);">
+            <div style="position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:linear-gradient(90deg,#a78bfa,#ec4899); color:#fff; font-size:0.65rem; font-weight:900; padding:3px 12px; border-radius:20px; letter-spacing:.08em; white-space:nowrap;">♾ LIFETIME</div>
+            <div style="font-size:0.72rem; font-weight:700; color:#a78bfa; text-transform:uppercase; letter-spacing:.08em; margin-bottom:6px;">Lifetime</div>
+            <div style="font-size:1.9rem; font-weight:900; color:#fff; line-height:1;">Rs. 20,000<span style="font-size:0.8rem; font-weight:500; color:var(--text-muted);">/=</span></div>
+            <div style="margin-top:12px; font-size:0.8rem; color:#a78bfa;">Pay once, access forever</div>
+          </div>
+        </div>
+
+        <!-- Feature list -->
+        <div class="pricing-card" style="margin-bottom:0;">
+          <ul class="pricing-features" style="margin-bottom:20px;">
+            <li>
+              <svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>
+              <span>50+ High Accuracy VIP Signals Daily</span>
+            </li>
+            <li>
+              <svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>
+              <span>AI Auto-Trading Bot Integration</span>
+            </li>
+            <li>
+              <svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>
+              <span>Full Win/Loss Transparency &amp; Analytics</span>
+            </li>
+            <li>
+              <svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>
+              <span>Priority Support &amp; Signal Alerts</span>
+            </li>
+          </ul>
+
+          <div class="switch-group" style="border-top: 1px solid var(--border-color); padding-top: 20px;">
+            <label for="premium-opt-in">Apply for Premium Account</label>
+            <label class="switch">
+              <input type="checkbox" id="premium-opt-in">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <!-- Payment Instructions -->
+          <div id="payment-instructions-panel" class="payment-box hidden">
+            <!-- Selected plan amount display -->
+            <div id="selected-plan-display"
+              style="background: rgba(255,198,0,0.08); border: 1px solid rgba(255,198,0,0.3); border-radius: 10px; padding: 12px 16px; margin: 14px 0; display: flex; justify-content: space-between; align-items: center;">
+              <span class="text-gray" style="font-size:0.85rem;">Selected Plan</span>
+              <span id="selected-plan-label" style="color: var(--color-primary); font-weight: 800; font-size: 1.05rem;">— Select a plan above —</span>
+            </div>
+
+            <!-- Payment Method Toggle -->
+            <div class="form-group" style="margin-bottom: 20px;">
+              <label style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase;">Payment Method</label>
+              <div style="display: flex; gap: 10px; margin-top: 6px;">
+                <button type="button" id="pay-method-bank" class="btn btn-secondary btn-sm" style="flex: 1; border-color: var(--color-primary); background: rgba(46, 196, 160, 0.08);" onclick="window.setPayMethod('bank')">Bank Transfer</button>
+                <button type="button" id="pay-method-wallet" class="btn btn-secondary btn-sm" style="flex: 1;" onclick="window.setPayMethod('wallet')">Pay with Wallet Balance</button>
+              </div>
+            </div>
+
+            <!-- Bank Transfer View -->
+            <div id="checkout-bank-view">
+              <h4 class="text-white">Commercial Bank Payment Details</h4>
+              <p class="text-gray" style="font-size: 0.85rem; margin-top: 5px; line-height: 1.4; margin-bottom: 12px;">
+                Transfer the exact amount for your selected plan to the account below, then upload your receipt slip.
+              </p>
+              <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; margin: 15px 0; text-align: left; font-size: 0.9rem;">
+                <div style="margin-bottom: 8px;"><span class="text-gray">Bank Name:</span> <strong class="text-white">Commercial Bank of Ceylon</strong></div>
+                <div style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                  <div><span class="text-gray">Account Number:</span> <strong class="text-white font-mono">8020391115</strong></div>
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+                    onclick="navigator.clipboard.writeText('8020391115'); this.style.color='#00ff88'; setTimeout(()=>this.style.color='',1500);"
+                    style="cursor:pointer; color:var(--color-primary); transition:color .3s;" title="Copy account number">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path>
+                  </svg>
+                </div>
+                <div><span class="text-gray">Account Name:</span> <strong class="text-white">thineth bandara</strong></div>
+              </div>
+            </div>
+
+            <!-- Wallet checkout view -->
+            <div id="checkout-wallet-view" class="hidden" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px; padding: 18px; margin: 15px 0; font-size: 0.95rem;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                <span class="text-gray">Plan Price (USD):</span>
+                <strong id="wallet-plan-price-usd" class="text-white font-mono">$0.00</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,0.06);">
+                <span class="text-gray">Your Wallet Balance:</span>
+                <strong id="wallet-user-balance-usd" class="text-white font-mono">$0.00</strong>
+              </div>
+            </div>
+
+            <form id="premium-payment-form" style="margin-top: 15px;">
+              <input type="hidden" id="payment-plan" value="">
+              <input type="hidden" id="payment-method-field" value="bank">
+
+              <div id="checkout-bank-form-fields">
+                <div class="form-group">
+                  <label for="payment-txid">Reference ID / TxID</label>
+                  <input type="text" id="payment-txid" class="form-control font-mono" placeholder="Enter transfer reference ID">
+                </div>
+              </div>
+
+              <button type="submit" id="btn-submit-upgrade" class="btn btn-primary" style="width: 100%;">Submit Verification Request</button>
+
+              <div id="payment-msg" class="status-message text-center mt-4"></div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Pending Activation screen -->
+      <div id="account-pending-panel" class="text-center hidden" style="max-width: 500px; margin: 50px auto;">
+        <svg fill="currentColor" width="60" height="60" viewBox="0 0 20 20" class="text-yellow" style="margin-bottom: 20px;">
+          <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+        </svg>
+        <h2 style="font-size: 2.2rem; font-weight: 800; margin-bottom: 10px;">Request Under Review</h2>
+        <p class="text-gray" style="line-height: 1.6;">Our administrators are currently verifying your payment details. Once verified, your status will update automatically and you will unlock VIP Premium signals.</p>
+        <div style="margin-top: 30px; display: inline-block; padding: 10px 20px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px solid var(--border-color);">
+          <span class="text-yellow font-bold">Verification Status: PENDING APPROVAL</span>
+        </div>
+      </div>
+
+      <!-- 3. VIP Premium Activated screen -->
+      <div id="account-vip-panel" class="text-center hidden" style="max-width: 520px; margin: 50px auto;">
+        <div style="width: 70px; height: 70px; border-radius: 50%; background: rgba(0, 255, 136, 0.1); border: 2px solid var(--color-buy); display: flex; justify-content: center; align-items: center; margin: 0 auto 20px auto; box-shadow: var(--glow-green);">
+          <svg fill="currentColor" width="40" height="40" viewBox="0 0 20 20" class="text-green">
+            <path fill-rule="evenodd" d="M6.267 3.455a.75.75 0 00-.708.523L4.547 7H1.75a.75.75 0 00-.75.75v.068c0 .244.11.474.305.629l2.25 1.8a.75.75 0 00.266.839l-.825 3.3a.75.75 0 001.19.865L7 12.872l2.814 2.391a.75.75 0 001.19-.865l-.825-3.3a.75.75 0 00.266-.839l2.25-1.8a.75.75 0 00.305-.629V7.75a.75.75 0 00-.75-.75h-2.797l-1.012-3.022a.75.75 0 00-.708-.523z" clip-rule="evenodd"></path>
+          </svg>
+        </div>
+        <h2 style="font-size: 2.2rem; font-weight: 800; margin-bottom: 10px;">VIP Premium Active</h2>
+        <p class="text-gray" style="line-height: 1.6; margin-bottom: 20px;">You have full VIP Premium access! Explore detailed daily signals and set up your automated execution bot.</p>
+        <div id="vip-expiry-info" style="margin-bottom: 24px;"></div>
+        <div style="display: flex; gap: 15px; justify-content: center;">
+          <a href="signals.html" class="btn btn-primary">View VIP Signals</a>
+          <a href="bot.html" class="btn btn-secondary">Open Trading Bot</a>
+        </div>
+      </div>
+
+      <!-- Referral System Panel -->
+      <div id="referral-system-panel" class="pricing-card" style="margin-top: 40px; text-align: left; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 20px; padding: 30px; backdrop-filter: blur(20px); position: relative; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.4);">
+        <div style="position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: linear-gradient(90deg, var(--color-primary), #00ff88);"></div>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 20px; margin-bottom: 25px;">
+          <div>
+            <h3 style="font-size: 1.6rem; font-weight: 800; color: #fff; margin-bottom: 6px; display: flex; align-items: center; gap: 10px;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--color-primary);">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+              Referral Program
+            </h3>
+            <p class="text-gray" style="font-size: 0.95rem; line-height: 1.5; max-width: 600px;">
+              Invite friends to PRIME METRIX and earn real cash rewards! You earn <span style="color: var(--color-buy); font-weight: 700;">$0.20 instantly</span> to your wallet when someone signs up with your link, plus a <span style="color: var(--color-primary); font-weight: 700;">15% commission</span> (in USD) whenever they purchase any VIP Premium package.
+            </p>
+          </div>
+        </div>
+
+        <!-- Referral Link Area -->
+        <div style="background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; margin-bottom: 30px;">
+          <label style="display: block; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 8px; letter-spacing: 0.5px;">Your Unique Referral Link</label>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <input type="text" id="referral-link-input" readonly value="Loading referral link..."
+              style="flex: 1; background: var(--bg-input); border: 1px solid var(--border-color); padding: 12px 16px; border-radius: 8px; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 0.9rem;" onclick="this.select()">
+            <button id="btn-copy-ref" class="btn btn-primary" style="padding: 12px 20px; font-weight: 700; white-space: nowrap;">
+              <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right: 6px;">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path>
+              </svg>
+              Copy Link
+            </button>
+          </div>
+          <div id="copy-ref-msg" class="text-green" style="font-size: 0.85rem; margin-top: 8px; font-weight: 600; min-height: 18px;"></div>
+        </div>
+
+        <!-- Referral Stats Grid -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; margin-bottom: 30px;">
+          <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; text-align: center;">
+            <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700;">Total Invited</div>
+            <div id="ref-count-total" style="font-size: 2.2rem; font-weight: 900; color: #fff; margin-top: 8px;">0</div>
+          </div>
+          <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; text-align: center;">
+            <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700;">Successful Upgrades</div>
+            <div id="ref-count-successful" style="font-size: 2.2rem; font-weight: 900; color: var(--color-primary); margin-top: 8px;">0</div>
+          </div>
+          <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; text-align: center;">
+            <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700;">Total Earned (USD)</div>
+            <div id="ref-total-earned" style="font-size: 2.2rem; font-weight: 900; color: var(--color-buy); margin-top: 8px; font-family: 'JetBrains Mono', monospace;">$0.00</div>
+          </div>
+        </div>
+
+        <!-- Referral History Table -->
+        <div>
+          <h4 style="font-size: 1.1rem; font-weight: 700; color: #fff; margin-bottom: 15px;">Referral History</h4>
+          <div class="table-wrapper" style="border-radius: 12px; border: 1px solid var(--border-color); max-height: 250px; overflow-y: auto;">
+            <table class="trade-table" style="width: 100%; border-collapse: collapse; text-align: left;">
+              <thead style="background: rgba(0,0,0,0.4); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px;">
+                <tr>
+                  <th class="py-3 px-4 text-gray" style="font-weight: 600;">Invited User</th>
+                  <th class="py-3 px-4 text-gray" style="font-weight: 600;">Joined Date</th>
+                  <th class="py-3 px-4 text-gray" style="font-weight: 600;">Status</th>
+                  <th class="py-3 px-4 text-gray" style="font-weight: 600;">Bonus Credited</th>
+                </tr>
+              </thead>
+              <tbody id="referral-history-list" style="font-size: 0.9rem;">
+                <tr>
+                  <td colspan="4" class="text-center py-4 text-gray">No referrals yet. Share your link to start earning!</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Wallet Top-Up Panel -->
+      <div id="wallet-topup-panel" class="pricing-card" style="margin-top: 30px; text-align: left; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 20px; padding: 30px; backdrop-filter: blur(20px); position: relative; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.4);">
+        <div style="position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: linear-gradient(90deg, var(--color-primary), var(--color-blue));"></div>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 20px; margin-bottom: 25px;">
+          <div>
+            <h3 style="font-size: 1.6rem; font-weight: 800; color: #fff; margin-bottom: 6px; display: flex; align-items: center; gap: 10px;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--color-primary);">
+                <rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect>
+                <line x1="12" y1="4" x2="12" y2="20"></line>
+                <line x1="2" y1="12" x2="22" y2="12"></line>
+              </svg>
+              Wallet Top-Up (Deposit)
+            </h3>
+            <p class="text-gray" style="font-size: 0.95rem; line-height: 1.5; max-width: 600px;">Top up USD using bank transfers. Funds can be used to purchase individual signals or upgrade your VIP subscription instantly.</p>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+          <!-- Top-Up Request Form -->
+          <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px;">
+            <h4 style="font-size: 1.1rem; font-weight: 700; color: #fff; margin-bottom: 15px;">New Deposit Request</h4>
+            <form id="wallet-deposit-form">
+              <div class="form-group">
+                <label for="deposit-amount-usd">Amount to Top-Up (USD)</label>
+                <input type="number" id="deposit-amount-usd" class="form-control" placeholder="Enter USD amount (e.g. 10)" min="1" step="0.5" required>
+              </div>
+              <div id="deposit-conversion-display" style="background: rgba(46,196,160,0.06); border: 1px solid rgba(46,196,160,0.25); border-radius: 8px; padding: 10px 14px; margin: 12px 0; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center;">
+                <span class="text-gray">Total LKR to Transfer:</span>
+                <strong id="deposit-amount-lkr" style="color: var(--color-primary); font-size: 1.05rem;">Rs. 0/=</strong>
+              </div>
+              <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; font-size: 0.85rem; margin-bottom: 15px;">
+                <div style="margin-bottom: 6px;"><span class="text-gray">Bank:</span> <strong class="text-white">Commercial Bank of Ceylon</strong></div>
+                <div style="margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
+                  <div><span class="text-gray">Acc Number:</span> <strong class="text-white font-mono">8020391115</strong></div>
+                  <span style="color:var(--color-primary); cursor:pointer; font-weight:600;" onclick="navigator.clipboard.writeText('8020391115'); alert('Copied Acc Number!');">Copy</span>
+                </div>
+                <div><span class="text-gray">Acc Name:</span> <strong class="text-white">thineth bandara</strong></div>
+              </div>
+              <div class="form-group">
+                <label for="deposit-txid">Transaction ID / Reference ID</label>
+                <input type="text" id="deposit-txid" class="form-control font-mono" placeholder="Enter bank reference ID" required>
+              </div>
+              </div>
+              <button type="submit" id="btn-submit-deposit" class="btn btn-primary" style="width: 100%;">Submit Top-Up Request</button>
+              <div id="deposit-msg" class="status-message text-center mt-3"></div>
+            </form>
+          </div>
+
+          <!-- Wallet Balance & Status -->
+          <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <h4 style="font-size: 1.1rem; font-weight: 700; color: #fff; margin-bottom: 15px;">Your Wallet Summary</h4>
+              <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 20px;">
+                <span style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">Available Wallet Balance</span>
+                <div id="wallet-balance-display" style="font-size: 2.8rem; font-weight: 900; color: var(--color-primary); margin-top: 8px; font-family: 'JetBrains Mono', monospace;">$0.00</div>
+              </div>
+              <div id="active-topup-notice" class="hidden" style="background: rgba(245,166,35,0.08); border: 1px solid rgba(245,166,35,0.3); border-radius: 10px; padding: 14px; font-size: 0.85rem;">
+                <div style="font-weight:700; color: var(--color-gold); margin-bottom:4px;">⏳ Top-up Request Under Review</div>
+                <p class="text-gray" style="margin: 0; line-height: 1.4;">You have a pending top-up request for <strong id="pending-topup-amount-text" class="text-white">$0.00</strong>. Our admin is verifying the details.</p>
+              </div>
+            </div>
+            <div style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.4; border-top: 1px dashed rgba(255,255,255,0.06); padding-top: 15px;">
+              💡 <strong>Instant VIP Upgrade:</strong> You can pay for any VIP plan directly with your wallet balance. Just select a plan and choose the "Pay via Wallet Balance" option.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- USER INBOX PANEL -->
+    <div id="user-inbox-panel" class="hidden" style="margin-top:40px;">
+      <div class="container">
+        <div style="position:relative;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:20px;padding:28px;overflow:hidden;">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--color-primary),#3b82f6);border-radius:20px 20px 0 0;"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:22px;">
+            <h3 style="font-size:1.1rem;font-weight:800;color:#fff;margin:0;display:flex;align-items:center;gap:8px;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+              Messages &amp; Gifts Inbox
+              <span id="inbox-unread-count-label" class="inbox-unread-badge" style="position:static;transform:none;">0</span>
+            </h3>
+            <button onclick="document.getElementById('user-inbox-panel').classList.add('hidden')" class="btn btn-secondary btn-xs">Close ✕</button>
+          </div>
+          <div id="inbox-messages-list" style="display:flex;flex-direction:column;gap:14px;max-height:500px;overflow-y:auto;padding-right:4px;">
+            <div class="text-center text-gray py-4">Loading messages...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script type="module" src="js/account-page.js"></script>
+</body>
+</html>

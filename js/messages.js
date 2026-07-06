@@ -44,7 +44,29 @@ import { sendGiftEmail } from "./email.js";
  */
 export async function sendAdminMessage({ targetUserId, targetEmail, targetName, subject, body, giftAmount = 0, allUsers = [] }) {
   const isBroadcast = targetUserId === "all";
-  const usersToSend = isBroadcast ? allUsers.filter(u => u.role !== "admin") : [{ uid: targetUserId, email: targetEmail, displayName: targetName }];
+
+  // When broadcasting, always fetch users from Firestore directly
+  // to avoid depending on the runtime UI table state (which may be empty or stale).
+  let usersToSend;
+  if (isBroadcast) {
+    try {
+      const snap = await getDocs(query(collection(db, "users")));
+      const dbUsers = [];
+      snap.forEach(d => {
+        const u = d.data();
+        if (u.role !== "admin") {
+          dbUsers.push({ uid: d.id, email: u.email || "", displayName: u.displayName || "" });
+        }
+      });
+      // Merge with any extra users passed in (for edge cases)
+      usersToSend = dbUsers.length > 0 ? dbUsers : allUsers.filter(u => u.role !== "admin");
+    } catch (fetchErr) {
+      console.error("[Messages] Failed to fetch users for broadcast, falling back to param list:", fetchErr);
+      usersToSend = allUsers.filter(u => u.role !== "admin");
+    }
+  } else {
+    usersToSend = [{ uid: targetUserId, email: targetEmail, displayName: targetName }];
+  }
 
   const results = [];
   for (const user of usersToSend) {
@@ -101,16 +123,19 @@ export async function sendAdminMessage({ targetUserId, targetEmail, targetName, 
 }
 
 // ── Subscribe to a user's inbox (real-time) ───────────────────────────────────
+// Note: We intentionally omit orderBy() here to avoid Firestore composite
+// index requirements. Messages are sorted client-side after each snapshot.
 export function subscribeToUserMessages(userId, callback) {
   const q = query(
     collection(db, "messages"),
     where("userId", "in", [userId, "all"]),
-    orderBy("createdAt", "desc"),
     limit(50)
   );
   return onSnapshot(q, snapshot => {
     const msgs = [];
     snapshot.forEach(d => msgs.push({ id: d.id, ...d.data() }));
+    // Sort newest-first client-side
+    msgs.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
     callback(msgs);
   }, err => {
     console.error("[Messages] Inbox subscription error:", err);

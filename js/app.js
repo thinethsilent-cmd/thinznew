@@ -30,6 +30,7 @@ import {
 import { db, storage } from "./firebase-config.js";
 import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-storage.js";
 import { doc, updateDoc, collection, query, where, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+import { subscribeToUserMessages, markMessageRead, sendAdminMessage, getAdminSentMessages } from "./messages.js";
 
 // Global App State
 let state = {
@@ -42,7 +43,8 @@ let state = {
 let activeUnsubscribes = {
   signals: null,
   trades: null,
-  users: null
+  users: null,
+  messages: null
 };
 
 // DOM Elements
@@ -238,6 +240,69 @@ function initAuthListeners() {
       // Render Badge
       updatePlanBadge(profile?.premiumStatus, profile?.premiumExpiresAt);
 
+      // Real-time user inbox listener
+      if (activeUnsubscribes.messages) {
+        activeUnsubscribes.messages();
+      }
+      activeUnsubscribes.messages = subscribeToUserMessages(user.uid, (msgs) => {
+        const listEl = document.getElementById("inbox-messages-list");
+        const unreadBadge = document.getElementById("inbox-unread-badge");
+        const unreadLabel = document.getElementById("inbox-unread-count-label");
+
+        const unreadCount = msgs.filter(m => !m.read).length;
+
+        if (unreadBadge) {
+          unreadBadge.textContent = unreadCount;
+          unreadBadge.classList.toggle("hidden", unreadCount === 0);
+        }
+        if (unreadLabel) {
+          unreadLabel.textContent = unreadCount;
+          unreadLabel.classList.toggle("hidden", unreadCount === 0);
+        }
+
+        if (listEl) {
+          listEl.innerHTML = "";
+          if (msgs.length === 0) {
+            listEl.innerHTML = '<div class="text-center text-gray py-4">No messages in your inbox.</div>';
+            return;
+          }
+          msgs.forEach(m => {
+            const card = document.createElement("div");
+            card.className = "message-inbox-card";
+            card.style.background = m.read ? "rgba(255,255,255,0.01)" : "rgba(46,196,160,0.04)";
+            card.style.border = m.read ? "1px solid rgba(255,255,255,0.05)" : "1px solid rgba(46,196,160,0.2)";
+            card.style.borderRadius = "12px";
+            card.style.padding = "16px";
+            card.style.position = "relative";
+            card.style.cursor = "pointer";
+
+            const date = new Date(m.createdAt).toLocaleDateString("en-GB") + " " + new Date(m.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            const giftMarkup = m.giftAmount > 0 ? `
+              <div style="margin-top:10px;display:inline-flex;align-items:center;gap:6px;background:rgba(0,255,136,0.1);border:1px solid rgba(0,255,136,0.2);padding:4px 10px;border-radius:20px;font-size:0.75rem;color:#00e676;font-weight:700;">
+                🎁 Gift: +$${m.giftAmount.toFixed(2)}
+              </div>` : "";
+            
+            const dotMarkup = m.read ? '' : `<span style="position:absolute;top:16px;right:16px;width:8px;height:8px;background:#00e676;border-radius:50%;box-shadow:0 0 8px #00e676;"></span>`;
+
+            card.innerHTML = `
+              ${dotMarkup}
+              <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:4px;">${date}</div>
+              <strong style="font-size:0.9rem;color:#fff;display:block;margin-bottom:4px;">${m.subject}</strong>
+              <p style="margin:0;font-size:0.82rem;color:var(--text-secondary);line-height:1.4;white-space:pre-wrap;">${m.body}</p>
+              ${giftMarkup}
+            `;
+
+            card.addEventListener("click", () => {
+              if (!m.read) {
+                markMessageRead(m.id);
+              }
+            });
+
+            listEl.appendChild(card);
+          });
+        }
+      });
+
       // Start Bot auto-trading background check if premium and toggle is enabled in state/storage
       if (profile?.premiumStatus === "paid" || profile?.role === "admin") {
         const isBotEnabled = localStorage.getItem(`bot_enabled_${user.uid}`) === "true";
@@ -257,6 +322,10 @@ function initAuthListeners() {
       
       stopBotExecution();
       cleanupSubscriptions("");
+      if (activeUnsubscribes.messages) {
+        activeUnsubscribes.messages();
+        activeUnsubscribes.messages = null;
+      }
     }
   });
 }
@@ -601,89 +670,23 @@ function initFormListeners() {
         msgEl.textContent = "Submitting payment details...";
 
         try {
-          // Step 1: Attempt image upload with live progress bar
-          const fileInput = document.getElementById("payment-slip");
-          let slipUrl = null;
-          if (fileInput && fileInput.files.length > 0) {
-            const file = fileInput.files[0];
-            try {
-              console.log("Starting payment slip upload:", file.name, file.size);
-              // Show progress bar
-              if (progressWrap) progressWrap.classList.remove("hidden");
-              setProgress(0);
-              msgEl.textContent = "Uploading payment slip...";
-
-              const storageRef = ref(storage, `payment_slips/${state.user.uid}/${Date.now()}_${file.name}`);
-              const uploadTask = uploadBytesResumable(storageRef, file);
-
-              slipUrl = await new Promise((resolve, reject) => {
-                // Add a timeout of 7 seconds so we don't get stuck indefinitely
-                const timeoutId = setTimeout(() => {
-                  reject(new Error("Upload timed out (7 seconds limit reached)."));
-                }, 7000);
-
-                uploadTask.on(
-                  "state_changed",
-                  (snapshot) => {
-                    // Live progress update
-                    const pct = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-                    setProgress(isNaN(pct) ? 0 : pct);
-                    msgEl.textContent = `Uploading payment slip... (${isNaN(pct) ? 0 : pct}%)`;
-                  },
-                  (error) => {
-                    clearTimeout(timeoutId);
-                    console.error("Firebase upload error callback:", error);
-                    reject(error);
-                  },
-                  async () => {
-                    clearTimeout(timeoutId);
-                    try {
-                      setProgress(100);
-                      msgEl.textContent = "Upload completed! Getting link...";
-                      const url = await getDownloadURL(uploadTask.snapshot.ref);
-                      resolve(url);
-                    } catch (err) {
-                      console.error("Error getting download URL:", err);
-                      reject(err);
-                    }
-                  }
-                );
-              });
-
-              // Brief pause so user sees 100% before hiding
-              await new Promise(r => setTimeout(r, 600));
-            } catch (uploadErr) {
-              console.warn("Image upload failed:", uploadErr);
-              msgEl.className = "status-message text-red";
-              msgEl.textContent = `⚠️ Slip upload failed: ${uploadErr.message || uploadErr}. Submitting without image...`;
-              // Keep this warning message visible for 3 seconds so the user can read it
-              await new Promise(r => setTimeout(r, 3000));
-            } finally {
-              // Always hide progress bar after upload attempt
-              if (progressWrap) progressWrap.classList.add("hidden");
-              setProgress(0);
-            }
-          }
-
-          // Step 2: Update Firestore — this is the critical step
-          msgEl.className = "status-message text-yellow";
-          msgEl.textContent = "Saving verification request...";
+          // Save to Firestore — no slip upload required
           const userRef = doc(db, "users", state.user.uid);
           const selectedPlan = document.getElementById("payment-plan")?.value || "";
           await updateDoc(userRef, {
             premiumStatus: "pending",
             paymentTxid: txid.trim(),
-            paymentPlan: selectedPlan, // e.g. "7 Days", "1 Month", "Lifetime"
+            paymentPlan: selectedPlan,
             paymentRequestedAt: new Date().toISOString(),
-            ...(slipUrl && { paymentSlipUrl: slipUrl })
+            paymentSlipUrl: null
           });
 
-          // Step 3: Update local state and UI
+          // Update local state and UI
           if (state.profile) state.profile.premiumStatus = "pending";
           updatePlanBadge("pending");
 
           msgEl.className = "status-message text-green";
-          msgEl.textContent = "✅ Request submitted! Admin will verify your payment and activate your account shortly.";
+          msgEl.textContent = "\u2705 Request submitted! Admin will verify your payment and activate your account shortly.";
 
           // Reset form
           submitTxForm.reset();
@@ -697,9 +700,7 @@ function initFormListeners() {
           msgEl.textContent = "Error: " + (err.message || "Could not submit request. Please try again.");
           console.error("Payment submission error:", err);
         } finally {
-          // Always re-enable submit button
           if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = "Submit Verification Request"; }
-          if (progressWrap) progressWrap.classList.add("hidden");
         }
       }
     });
@@ -1751,9 +1752,13 @@ function loadAdminPage() {
   const pendingList = document.getElementById("admin-pending-payments");
   const userList = document.getElementById("admin-users-list");
   const adminSignalsList = document.getElementById("admin-signals-table");
+  if (!pendingList || !userList || !adminSignalsList) return;
+
+  let currentUsersList = [];
 
   // Load Pending Payments and Users Directories
   activeUnsubscribes.users = subscribeToAllUsers((users) => {
+    currentUsersList = users;
     pendingList.innerHTML = "";
     userList.innerHTML = "";
 
@@ -1902,6 +1907,24 @@ function loadAdminPage() {
         userList.appendChild(tr);
       });
     }
+
+    // Populate targeted message user dropdown
+    const selectEl = document.getElementById("msg-target-user");
+    if (selectEl) {
+      const currentVal = selectEl.value;
+      selectEl.innerHTML = '<option value="all">📢 Broadcast to All Users</option>';
+      users.forEach(u => {
+        if (u.role !== 'admin') {
+          const option = document.createElement("option");
+          option.value = u.uid;
+          option.dataset.email = u.email || "";
+          option.dataset.name = u.displayName || u.email || "";
+          option.textContent = `${u.displayName || 'No Name'} (${u.email})`;
+          selectEl.appendChild(option);
+        }
+      });
+      selectEl.value = currentVal;
+    }
   });
 
   // 3. Admin signals list to update status or delete
@@ -1958,6 +1981,98 @@ function loadAdminPage() {
       });
     });
   });
+
+  // Setup Admin Message & Gift Form
+  const messageForm = document.getElementById("admin-message-form");
+  if (messageForm && !messageForm.dataset.listenerWired) {
+    messageForm.dataset.listenerWired = "true";
+    messageForm.addEventListener("submit", async e => {
+      e.preventDefault();
+      const targetVal = document.getElementById("msg-target-user").value;
+      const subject = document.getElementById("msg-subject").value.trim();
+      const body = document.getElementById("msg-body").value.trim();
+      const giftVal = parseFloat(document.getElementById("msg-gift").value) || 0;
+      const statusEl = document.getElementById("admin-msg-status");
+      const submitBtn = document.getElementById("btn-send-admin-msg");
+
+      if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "Sending..."; }
+      if (statusEl) { statusEl.className = "status-message text-yellow"; statusEl.textContent = "Sending message(s)..."; }
+
+      try {
+        let targetEmail = "";
+        let targetName = "";
+        if (targetVal !== "all") {
+          const selectEl = document.getElementById("msg-target-user");
+          const selectedOpt = selectEl.options[selectEl.selectedIndex];
+          targetEmail = selectedOpt.dataset.email;
+          targetName = selectedOpt.dataset.name;
+        }
+
+        const res = await sendAdminMessage({
+          targetUserId: targetVal,
+          targetEmail,
+          targetName,
+          subject,
+          body,
+          giftAmount: giftVal,
+          allUsers: currentUsersList
+        });
+
+        if (statusEl) {
+          statusEl.className = "status-message text-green";
+          statusEl.textContent = `✅ Successfully sent to ${res.sent} user(s). Failed: ${res.failed}`;
+        }
+        messageForm.reset();
+        _loadAdminSentMessagesLog();
+      } catch (err) {
+        console.error("Error sending message:", err);
+        if (statusEl) { statusEl.className = "status-message text-red"; statusEl.textContent = "Error: " + err.message; }
+      } finally {
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Send Message`; }
+      }
+    });
+  }
+
+  // Load recent sent messages log
+  _loadAdminSentMessagesLog();
+}
+
+async function _loadAdminSentMessagesLog() {
+  const logEl = document.getElementById("admin-sent-messages-log");
+  if (!logEl) return;
+  logEl.innerHTML = '<div class="text-center text-gray py-4">Loading sent messages...</div>';
+  try {
+    const msgs = await getAdminSentMessages(30);
+    logEl.innerHTML = "";
+    if (msgs.length === 0) {
+      logEl.innerHTML = '<div class="text-center text-gray py-4">No messages sent yet.</div>';
+      return;
+    }
+    msgs.forEach(m => {
+      const card = document.createElement("div");
+      card.style.background = "rgba(255,255,255,0.02)";
+      card.style.border = "1px solid rgba(255,255,255,0.05)";
+      card.style.borderRadius = "10px";
+      card.style.padding = "12px 14px";
+      
+      const date = new Date(m.createdAt).toLocaleString();
+      const giftBadge = m.giftAmount > 0 ? `<span class="plan-badge" style="background:rgba(0,255,136,0.1);color:#00e676;border-color:rgba(0,255,136,0.25);margin-left:8px;font-size:0.75rem;">🎁 $${m.giftAmount.toFixed(2)}</span>` : '';
+      const targetLabel = m.broadcast ? '📢 Broadcast' : `👤 ${m.displayName || m.userEmail}`;
+
+      card.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <span style="font-size:0.8rem;font-weight:700;color:var(--text-secondary);">${targetLabel}${giftBadge}</span>
+          <span style="font-size:0.75rem;color:var(--text-muted);">${date}</span>
+        </div>
+        <strong style="color:#fff;font-size:0.9rem;display:block;margin-bottom:4px;">${m.subject}</strong>
+        <p style="margin:0;font-size:0.82rem;color:var(--text-muted);white-space:pre-wrap;line-height:1.4;">${m.body}</p>
+      `;
+      logEl.appendChild(card);
+    });
+  } catch (err) {
+    console.error("Error loading sent messages log:", err);
+    logEl.innerHTML = '<div class="text-center text-red py-4">Error loading messages log.</div>';
+  }
 }
 
 function openSlipModal(url) {
@@ -1985,4 +2100,13 @@ function showLoading(show) {
 // Expose modal functions globally for inline onclick handlers
 window.openSlipModal = openSlipModal;
 window.closeSlipModal = closeSlipModal;
+window.__openInbox = function() {
+  const panel = document.getElementById("user-inbox-panel");
+  if (panel) {
+    panel.classList.toggle("hidden");
+    if (!panel.classList.contains("hidden")) {
+      panel.scrollIntoView({ behavior: "smooth" });
+    }
+  }
+};
 

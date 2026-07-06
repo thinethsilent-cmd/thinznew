@@ -4,8 +4,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>THINz Banda | Binance Signals & AI Auto-Trading Bot</title>
-  <meta name="description" content="THINz Banda – Get high-accuracy crypto signals and automate trades directly to Binance using our advanced AI auto-trading bot. Register free to get started.">
+  <title>PRIME METRIX Trading | Binance Signals & AI Auto-Trading Bot</title>
+  <meta name="description" content="PRIME METRIX Trading – Get high-accuracy crypto signals and automate trades directly to Binance using our advanced AI auto-trading bot. Register free to get started.">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
 
   <link rel="stylesheet" href="css/style.css?v=5">
@@ -47,12 +47,9 @@
   <!-- Header -->
   <header class="header">
     <div class="container nav-wrapper">
-      <a href="#home" class="logo" style="display:flex;align-items:center;gap:0;text-decoration:none;">
-        <span
-          style="font-size:1.35rem;font-weight:900;letter-spacing:-0.03em;color:#fff;font-family:'Inter',sans-serif;text-transform:uppercase;">THIN<span
-            style="color:var(--color-primary);">z</span></span>
-        <span
-          style="font-size:1.35rem;font-weight:900;letter-spacing:-0.03em;color:var(--color-primary);font-family:'Inter',sans-serif;margin-left:5px;">Banda</span>
+      <a href="#home" class="logo">
+        <span class="logo-txt-white">PRIME</span>
+        <span class="logo-txt-primary">METRIX</span>
       </a>
 
       <!-- Hamburger Toggle Button -->
@@ -77,8 +74,8 @@
 
         <div class="nav-actions">
           <!-- YouTube Channel -->
-          <a href="https://www.youtube.com/@THINzBanda" target="_blank" rel="noopener" class="nav-yt-link"
-            title="Watch THINz Banda on YouTube">
+          <a href="https://www.youtube.com/@PrimeMetrixTrading" target="_blank" rel="noopener" class="nav-yt-link"
+            title="Watch PRIME METRIX Trading on YouTube">
             <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
               <path
                 d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.11C19.517 3.545 12 3.545 12 3.545s-7.516 0-9.387.507a3.003 3.003 0 0 0-2.11 2.11C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 0 0 2.11 2.11c1.871.507 9.388.507 9.388.507s7.518 0 9.388-.507a3.003 3.003 0 0 0 2.11-2.11C24 15.967 24 12 24 12s0-3.967-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
@@ -868,29 +865,9 @@
                   <input type="text" id="payment-txid" class="form-control font-mono"
                     placeholder="Enter transfer reference ID">
                 </div>
-                <div class="form-group">
-                  <label for="payment-slip">Upload Receipt Slip (Image)</label>
-                  <input type="file" id="payment-slip" class="form-control" accept="image/*" style="padding: 8px;">
-                </div>
               </div>
 
               <button type="submit" id="btn-submit-upgrade" class="btn btn-primary" style="width: 100%;">Submit Verification Request</button>
-
-              <!-- Upload Progress Bar -->
-              <div id="upload-progress-wrap" class="hidden" style="margin-top: 14px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                  <span
-                    style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Uploading Slip...</span>
-                  <span id="upload-progress-pct"
-                    style="font-size: 0.85rem; font-weight: 700; color: var(--color-primary);">0%</span>
-                </div>
-                <div
-                  style="width: 100%; height: 8px; background: rgba(255,255,255,0.06); border-radius: 999px; overflow: hidden; border: 1px solid var(--border-color);">
-                  <div id="upload-progress-bar"
-                    style="height: 100%; width: 0%; background: linear-gradient(90deg, var(--color-primary), #ffa800); border-radius: 999px; transition: width 0.3s ease; box-shadow: 0 0 10px rgba(243,186,47,0.5);">
-                  </div>
-                </div>
-              </div>
 
               <div id="payment-msg" class="status-message text-center mt-4"></div>
             </form>
@@ -954,7 +931,7 @@
               Referral Program
             </h3>
             <p class="text-gray" style="font-size: 0.95rem; line-height: 1.5; max-width: 600px;">
-              Invite friends to THINz Banda and earn real cash rewards! You earn <span style="color: var(--color-buy); font-weight: 700;">$0.20 instantly</span> to your wallet when someone signs up with your link, plus a <span style="color: var(--color-primary); font-weight: 700;">15% commission</span> (in USD) whenever they purchase any VIP Premium package.
+              Invite friends to PRIME METRIX and earn real cash rewards! You earn <span style="color: var(--color-buy); font-weight: 700;">$0.20 instantly</span> to your wallet when someone signs up with your link, plus a <span style="color: var(--color-primary); font-weight: 700;">15% commission</span> (in USD) whenever they purchase any VIP Premium package.
             </p>
           </div>
         </div>
@@ -1071,24 +1048,8 @@
                 <input type="text" id="deposit-txid" class="form-control font-mono" placeholder="Enter bank reference ID" required>
               </div>
 
-              <div class="form-group">
-                <label for="deposit-slip">Upload Receipt Slip</label>
-                <input type="file" id="deposit-slip" class="form-control" accept="image/*" style="padding: 8px;" required>
-              </div>
-
               <button type="submit" id="btn-submit-deposit" class="btn btn-primary" style="width: 100%;">Submit Top-Up Request</button>
               
-              <!-- Progress bar -->
-              <div id="deposit-upload-progress-wrap" class="hidden" style="margin-top: 14px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                  <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Uploading Slip...</span>
-                  <span id="deposit-upload-progress-pct" style="font-size: 0.85rem; font-weight: 700; color: var(--color-primary);">0%</span>
-                </div>
-                <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.06); border-radius: 999px; overflow: hidden; border: 1px solid var(--border-color);">
-                  <div id="deposit-upload-progress-bar" style="height: 100%; width: 0%; background: linear-gradient(90deg, var(--color-primary), #ffa800); border-radius: 999px; transition: width 0.3s ease; box-shadow: 0 0 10px rgba(243,186,47,0.5);"></div>
-                </div>
-              </div>
-
               <div id="deposit-msg" class="status-message text-center mt-3"></div>
             </form>
           </div>
@@ -1371,16 +1332,6 @@
   </script>
 
 
-  <!-- Modal for viewing full size slip images -->
-  <div id="slip-modal" class="loader-overlay hidden" onclick="closeSlipModal()" style="cursor: zoom-out;">
-    <div style="position: relative; max-width: 90%; max-height: 90%;">
-      <img id="slip-modal-img" src=""
-        style="width: auto; height: auto; max-width: 100%; max-height: 80vh; border-radius: 8px; border: 2px solid var(--border-color); box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
-      <p class="text-center text-gray mt-4" style="font-size: 0.9rem; font-weight: 500;">Click anywhere to close preview
-      </p>
-    </div>
-  </div>
-
   <!-- Site Footer -->
   <footer class="site-footer">
     <div class="container">
@@ -1388,14 +1339,13 @@
         <div class="footer-brand">
           <a href="#home" style="display:inline-flex;align-items:center;gap:0;text-decoration:none;">
             <span
-              style="font-size:1.25rem;font-weight:900;color:#fff;font-family:'Inter',sans-serif;text-transform:uppercase;">THIN<span
-                style="color:var(--color-primary);">z</span></span>
+              style="font-size:1.25rem;font-weight:900;color:#fff;font-family:'Inter',sans-serif;text-transform:uppercase;">PRIME</span>
             <span
-              style="font-size:1.25rem;font-weight:900;color:var(--color-primary);font-family:'Inter',sans-serif;margin-left:5px;">Banda</span>
+              style="font-size:1.25rem;font-weight:900;color:var(--color-primary);font-family:'Inter',sans-serif;margin-left:5px;">METRIX</span>
           </a>
           <p>Professional crypto trading signals and AI-powered auto-trading bot for Binance. Real market data. Real
             results.</p>
-          <a href="https://www.youtube.com/@THINzBanda" target="_blank" rel="noopener"
+          <a href="https://www.youtube.com/@PrimeMetrixTrading" target="_blank" rel="noopener"
             style="display:inline-flex;align-items:center;gap:8px;margin-top:16px;color:#ff0000;font-weight:700;font-size:0.85rem;transition:opacity 0.2s;">
             <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
               <path
@@ -1430,7 +1380,7 @@
         results. Never invest more than you can afford to lose.
       </div>
       <div class="footer-bottom">
-        <span>© 2026 THINz Banda. All rights reserved.</span>
+        <span>© 2026 PRIME METRIX Trading. All rights reserved.</span>
         <span style="display:flex;align-items:center;gap:6px;"><span class="ticker-live-dot"></span> Live signals
           powered by Binance API</span>
       </div>

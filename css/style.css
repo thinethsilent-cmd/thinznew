@@ -6,18 +6,18 @@
 
 /* Design Tokens & CSS Variables */
 :root {
-  --bg-main: #060810;
-  --bg-card: rgba(12, 16, 32, 0.7);
-  --bg-card-hover: rgba(16, 22, 44, 0.85);
-  --bg-input: #0c1020;
-  --border-color: rgba(255, 255, 255, 0.07);
-  --border-focus: rgba(46, 196, 160, 0.5);
+  --bg-main: #121214;
+  --bg-card: rgba(24, 24, 26, 0.75);
+  --bg-card-hover: rgba(30, 30, 33, 0.88);
+  --bg-input: #1b1b1d;
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-focus: rgba(232, 177, 45, 0.5);
   
-  --color-primary: #2ec4a0;
-  --color-primary-hover: #25a889;
-  --color-primary-glow: rgba(46, 196, 160, 0.3);
+  --color-primary: #e8b12d;
+  --color-primary-hover: #d29e20;
+  --color-primary-glow: rgba(232, 177, 45, 0.25);
   --color-gold: #f5a623;
-  --color-gold-glow: rgba(245, 166, 35, 0.3);
+  --color-gold-glow: rgba(245, 166, 35, 0.25);
   --color-buy: #00e676;
   --color-sell: #ff3366;
   --color-purple: #9b59f5;
@@ -27,19 +27,19 @@
   --text-secondary: #8896ae;
   --text-muted: #4a566a;
   
-  --glow-gold: 0 0 20px rgba(245, 166, 35, 0.4);
-  --glow-teal: 0 0 20px rgba(46, 196, 160, 0.4);
-  --glow-green: 0 0 20px rgba(0, 230, 118, 0.4);
-  --glow-red: 0 0 20px rgba(255, 51, 102, 0.4);
-  --glow-purple: 0 0 20px rgba(155, 89, 245, 0.4);
+  --glow-gold: 0 0 20px rgba(232, 177, 45, 0.35);
+  --glow-teal: 0 0 20px rgba(232, 177, 45, 0.35);
+  --glow-green: 0 0 20px rgba(0, 230, 118, 0.35);
+  --glow-red: 0 0 20px rgba(255, 51, 102, 0.35);
+  --glow-purple: 0 0 20px rgba(155, 89, 245, 0.3);
   
   --transition-fast: 0.2s ease;
   --transition-normal: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-bounce: 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 
-  --gradient-primary: linear-gradient(135deg, #2ec4a0, #3b82f6);
+  --gradient-primary: linear-gradient(135deg, #e8b12d, #f5a623);
   --gradient-gold: linear-gradient(135deg, #f5a623, #f6d365);
-  --gradient-hero: linear-gradient(135deg, #2ec4a0 0%, #3b82f6 50%, #9b59f5 100%);
+  --gradient-hero: linear-gradient(135deg, #e8b12d 0%, #f5a623 50%, #ffc600 100%);
   --gradient-buy: linear-gradient(135deg, #00e676, #00c853);
   --gradient-sell: linear-gradient(135deg, #ff3366, #ff1744);
 }
@@ -62,10 +62,10 @@ body {
   overflow-x: hidden;
   line-height: 1.6;
   background-image: 
-    radial-gradient(ellipse at 10% 10%, rgba(46, 196, 160, 0.04) 0%, transparent 50%),
-    radial-gradient(ellipse at 90% 20%, rgba(59, 130, 246, 0.04) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 90%, rgba(155, 89, 245, 0.03) 0%, transparent 50%),
-    radial-gradient(circle at 50% 50%, rgba(6, 8, 16, 1) 0%, rgba(3, 4, 8, 1) 100%);
+    radial-gradient(ellipse at 10% 10%, rgba(232, 177, 45, 0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 90% 20%, rgba(245, 166, 35, 0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 90%, rgba(232, 177, 45, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, #121214 0%, #0c0c0d 100%);
   background-attachment: fixed;
 }
 
@@ -81,7 +81,7 @@ button, input, select, textarea {
 /* Custom Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: var(--bg-main); }
-::-webkit-scrollbar-thumb { background: rgba(46, 196, 160, 0.3); border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: rgba(232, 177, 45, 0.3); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-primary); }
 
 /* ═══════════════════════════════════════════════════════════
@@ -280,16 +280,52 @@ button, input, select, textarea {
   height: 72px;
 }
 
+/* Responsive Logo Styles */
 .logo {
-  display: flex;
-  align-items: center;
-  font-weight: 900;
-  font-size: 1.4rem;
-  letter-spacing: -0.03em;
-  color: #fff;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0 !important;
+  text-decoration: none !important;
 }
 
-.logo span { color: var(--color-primary); }
+.logo .logo-txt-white {
+  font-size: 1.35rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: #fff;
+  font-family: 'Inter', sans-serif;
+  text-transform: uppercase;
+  transition: font-size var(--transition-fast);
+}
+
+.logo .logo-txt-primary {
+  font-size: 1.35rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: var(--color-primary);
+  font-family: 'Inter', sans-serif;
+  margin-left: 5px;
+  transition: font-size var(--transition-fast);
+}
+
+.logo .logo-z {
+  color: var(--color-primary);
+}
+
+/* Responsiveness for logo */
+@media (max-width: 480px) {
+  .logo .logo-txt-white,
+  .logo .logo-txt-primary {
+    font-size: 1.15rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .logo .logo-txt-white,
+  .logo .logo-txt-primary {
+    font-size: 1rem;
+  }
+}
 
 .nav-links {
   display: flex;

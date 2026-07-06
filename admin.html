@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PRIME METRIX Trading | Admin Management Console</title>
+  <meta name="description" content="Admin console for PRIME METRIX Trading. Manage VIP subscriptions, wallet top-ups, signals, and send messages to users.">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="stylesheet" href="css/style.css?v=5" />
+  <script>
+    document.addEventListener("contextmenu", (e) => e.preventDefault());
+    document.addEventListener("keydown", (e) => {
+      if (
+        e.key === "F12" ||
+        (e.ctrlKey && e.key.toLowerCase() === "u") ||
+        (e.ctrlKey && e.shiftKey && ["i","c","j"].includes(e.key.toLowerCase())) ||
+        (e.ctrlKey && e.key.toLowerCase() === "s")
+      ) { e.preventDefault(); return false; }
+    });
+  </script>
+</head>
+<body>
+
+  <!-- Global Loader -->
+  <div id="global-loader" class="loader-overlay hidden">
+    <div class="spinner"></div>
+    <p>Loading...</p>
+  </div>
+
+  <!-- Slip Image Modal -->
+  <div id="slip-modal" class="loader-overlay hidden" onclick="closeSlipModal()" style="cursor: zoom-out;">
+    <img id="slip-modal-img" src="" alt="Payment Slip"
+      style="max-width: 90vw; max-height: 85vh; border-radius: 12px; box-shadow: 0 0 40px rgba(0,0,0,0.8); object-fit: contain;" />
+  </div>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="container nav-wrapper">
+      <a href="home.html" class="logo">
+        <span class="logo-txt-white">PRIME</span>
+        <span class="logo-txt-primary">METRIX</span>
+      </a>
+
+      <button class="menu-toggle" id="mobile-menu-toggle" aria-label="Toggle Menu">
+        <span class="hamburger-bar"></span>
+        <span class="hamburger-bar"></span>
+        <span class="hamburger-bar"></span>
+      </button>
+
+      <div class="nav-menu-container" id="nav-menu-container">
+        <nav>
+          <ul class="nav-links">
+            <li><a href="home.html">Home</a></li>
+            <li class="auth-link"><a href="signals.html">Signals</a></li>
+            <li class="auth-link"><a href="bot.html">Auto-Trading Bot</a></li>
+            <li class="auth-link"><a href="account.html">Account</a></li>
+            <li class="auth-link"><a href="referrals.html">Referrals</a></li>
+            <li class="auth-link"><a href="topup.html">Wallet</a></li>
+            <li class="auth-link hidden" id="nav-admin-link"><a href="admin.html" class="text-yellow active">Admin Panel</a></li>
+          </ul>
+        </nav>
+        <div class="nav-actions">
+          <a href="https://www.youtube.com/@PrimeMetrixTrading" target="_blank" rel="noopener" class="nav-yt-link" title="Watch PRIME METRIX Trading on YouTube">
+            <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.11C19.517 3.545 12 3.545 12 3.545s-7.516 0-9.387.507a3.003 3.003 0 0 0-2.11 2.11C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 0 0 2.11 2.11c1.871.507 9.388.507 9.388.507s7.518 0 9.388-.507a3.003 3.003 0 0 0 2.11-2.11C24 15.967 24 12 24 12s0-3.967-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+          </a>
+          <a href="auth.html" class="btn btn-secondary btn-sm guest-link" id="nav-login-btn">Sign In</a>
+          <a href="auth.html" class="btn btn-primary btn-sm guest-link" id="nav-signup-btn">Start Free</a>
+          <div id="nav-profile" class="profile-nav-box hidden">
+            <span id="nav-wallet-balance" class="plan-badge" style="background:rgba(46,196,160,0.15);color:var(--color-primary);border:1px solid rgba(46,196,160,0.25);font-family:'JetBrains Mono',monospace;font-weight:700;text-transform:none;">$0.00</span>
+            <span id="nav-premium-badge" class="plan-badge badge-free">Free Tier</span>
+            <button id="nav-inbox-btn" class="inbox-bell-btn" title="Messages &amp; Inbox" onclick="window.__openInbox && window.__openInbox()" style="position:relative;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:6px 8px;cursor:pointer;display:flex;align-items:center;transition:background 0.2s;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+              <span id="inbox-unread-badge" class="inbox-unread-badge hidden">0</span>
+            </button>
+            <span id="nav-profile-name" class="text-white font-medium">Username</span>
+            <a href="#" class="btn btn-secondary btn-xs text-red" id="btn-logout">Logout</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Access denied notice (shown if not admin) -->
+  <div id="admin-guard-notice" class="hidden" style="text-align:center;padding:80px 24px;">
+    <div style="max-width:440px;margin:0 auto;background:rgba(255,51,102,0.04);border:1px solid rgba(255,51,102,0.3);border-radius:20px;padding:40px 32px;">
+      <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#ff3366" stroke-width="2" style="margin-bottom:20px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      <h2 style="font-size:1.8rem;font-weight:800;margin-bottom:12px;color:#ff3366;">Access Denied</h2>
+      <p class="text-gray" style="margin-bottom:28px;">This page is restricted to administrators only.</p>
+      <a href="home.html" class="btn btn-secondary">Back to Home</a>
+    </div>
+  </div>
+
+  <!-- ADMIN SECTION -->
+  <section id="page-admin" class="hidden" style="padding: 40px 0 60px;">
+    <div class="container">
+      <div class="dashboard-header">
+        <div class="dashboard-title">
+          <h1>Admin Management Console</h1>
+          <p>Manage membership activations, signal creation, and member performance.</p>
+        </div>
+      </div>
+
+      <!-- Left and Right side panels -->
+      <div class="admin-grid" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));">
+        <!-- 1. Membership approvals -->
+        <div class="admin-card">
+          <h3>Subscription Verification Requests</h3>
+          <div id="admin-pending-payments">
+            <!-- Dynamic request boxes -->
+          </div>
+        </div>
+
+        <!-- 1b. Wallet Top-Up approvals -->
+        <div class="admin-card">
+          <h3>Wallet Top-Up Verification Requests</h3>
+          <div id="admin-pending-topups">
+            <!-- Dynamic request boxes -->
+          </div>
+        </div>
+
+        <!-- 2. Create Signal Form -->
+        <div class="admin-card">
+          <h3>Publish Crypto Signal</h3>
+          <form id="admin-signal-form">
+            <div class="admin-grid" style="margin-bottom: 0; gap: 15px;">
+              <div class="form-group">
+                <label for="sig-pair">Trading Pair</label>
+                <input type="text" id="sig-pair" class="form-control font-bold" placeholder="BTC/USDT" required>
+              </div>
+              <div class="form-group">
+                <label for="sig-timeframe">Timeframe</label>
+                <select id="sig-timeframe" class="form-control">
+                  <option value="15M">15 Minutes</option>
+                  <option value="1H" selected>1 Hour</option>
+                  <option value="4H">4 Hours</option>
+                  <option value="1D">1 Day</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="admin-grid" style="margin-bottom: 0; gap: 15px;">
+              <div class="form-group">
+                <label for="sig-direction">Direction</label>
+                <select id="sig-direction" class="form-control">
+                  <option value="BUY">BUY / LONG</option>
+                  <option value="SELL">SELL / SHORT</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="sig-entry">Entry Price</label>
+                <input type="text" id="sig-entry" class="form-control font-mono" placeholder="65400" required>
+              </div>
+            </div>
+
+            <div class="admin-grid" style="margin-bottom: 0; gap: 15px;">
+              <div class="form-group">
+                <label for="sig-targets">Take Profit Targets (Comma separated)</label>
+                <input type="text" id="sig-targets" class="form-control font-mono" placeholder="66200, 67000, 68000" required>
+              </div>
+              <div class="form-group">
+                <label for="sig-stoploss">Stop Loss</label>
+                <input type="text" id="sig-stoploss" class="form-control font-mono" placeholder="64000" required>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">Publish Live Signal</button>
+            <div id="admin-signal-msg" class="status-message text-center mt-4"></div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Lower Panels: Signals Manager and User Win/Loss Log -->
+      <div class="admin-grid">
+        <!-- 3. Signals manager list -->
+        <div class="admin-card" style="grid-column: span 2; min-height: auto;">
+          <h3>Active Trading Signals</h3>
+          <div class="table-wrapper">
+            <table class="trade-table">
+              <thead>
+                <tr>
+                  <th class="py-3 px-4">Trading Pair</th>
+                  <th class="py-3 px-4">Direction</th>
+                  <th class="py-3 px-4">Entry</th>
+                  <th class="py-3 px-4">Current Status</th>
+                  <th class="py-3 px-4">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="admin-signals-table">
+                <!-- Inserted Dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 4. Registered Users list -->
+        <div class="admin-card" style="grid-column: span 2; min-height: auto;">
+          <h3>Users Performance Directory</h3>
+          <div class="table-wrapper">
+            <table class="trade-table">
+              <thead>
+                <tr>
+                  <th class="py-3 px-4">Display Name</th>
+                  <th class="py-3 px-4">Email</th>
+                  <th class="py-3 px-4">Membership</th>
+                  <th class="py-3 px-4">Plan &amp; Expiry</th>
+                  <th class="py-3 px-4">Bot Win/Loss (Winrate)</th>
+                </tr>
+              </thead>
+              <tbody id="admin-users-list">
+                <!-- Inserted Dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADMIN MESSAGES & GIFTS PANEL -->
+      <div class="admin-grid" style="margin-top:28px;grid-template-columns:1fr 1fr;">
+        <!-- Send Message / Gift Form -->
+        <div class="admin-card" style="border-color:rgba(46,196,160,0.15);position:relative;">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--color-primary),#3b82f6);border-radius:4px 4px 0 0;"></div>
+          <h3 style="display:flex;align-items:center;gap:8px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            Send Message &amp; Gift
+          </h3>
+          <form id="admin-message-form">
+            <div class="form-group">
+              <label for="msg-target-user" style="font-size:0.8rem;font-weight:700;color:var(--text-secondary);">Send To</label>
+              <select id="msg-target-user" class="form-control">
+                <option value="all">📢 Broadcast to All Users</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="msg-subject" style="font-size:0.8rem;font-weight:700;color:var(--text-secondary);">Subject</label>
+              <input type="text" id="msg-subject" class="form-control" placeholder="e.g. 🎁 Special Gift for You!" required>
+            </div>
+            <div class="form-group">
+              <label for="msg-body" style="font-size:0.8rem;font-weight:700;color:var(--text-secondary);">Message Body</label>
+              <textarea id="msg-body" class="form-control" rows="5" placeholder="Write your message here..." required style="resize:vertical;"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="msg-gift" style="font-size:0.8rem;font-weight:700;color:var(--text-secondary);">💰 Wallet Gift Amount (USD, optional)</label>
+              <input type="number" id="msg-gift" class="form-control font-mono" placeholder="0.00" min="0" step="0.50" style="font-size:1.1rem;font-weight:700;">
+              <div style="font-size:0.75rem;color:var(--text-muted);margin-top:5px;">Leave 0 for message-only (no gift). Gift is instantly credited to wallet.</div>
+            </div>
+            <button type="submit" id="btn-send-admin-msg" class="btn btn-primary" style="width:100%;padding:14px;font-weight:800;font-size:1rem;border-radius:12px;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              Send Message
+            </button>
+            <div id="admin-msg-status" class="status-message text-center mt-3"></div>
+          </form>
+        </div>
+
+        <!-- Sent Messages Log -->
+        <div class="admin-card" style="position:relative;">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,rgba(167,139,250,0.8),rgba(59,130,246,0.8));border-radius:4px 4px 0 0;"></div>
+          <h3 style="display:flex;align-items:center;gap:8px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            Recent Sent Messages
+          </h3>
+          <div id="admin-sent-messages-log" style="display:flex;flex-direction:column;gap:10px;max-height:420px;overflow-y:auto;">
+            <div class="text-center text-gray py-4">Loading...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    function openSlipModal(url) {
+      const modal = document.getElementById('slip-modal');
+      const img = document.getElementById('slip-modal-img');
+      if (modal && img) { img.src = url; modal.classList.remove('hidden'); }
+    }
+    function closeSlipModal() {
+      const modal = document.getElementById('slip-modal');
+      if (modal) modal.classList.add('hidden');
+    }
+    window.openSlipModal = openSlipModal;
+    window.closeSlipModal = closeSlipModal;
+  </script>
+
+  <script type="module" src="js/admin-page.js"></script>
+</body>
+</html>

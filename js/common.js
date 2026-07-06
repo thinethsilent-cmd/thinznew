@@ -487,64 +487,7 @@ export function initFormListeners() {
         msgEl.textContent = 'Submitting payment details...';
 
         try {
-          // Step 1: Try uploading image with live progress bar
-          const fileInput = document.getElementById('payment-slip');
-          let slipUrl = null;
-          if (fileInput && fileInput.files.length > 0) {
-            const file = fileInput.files[0];
-            try {
-              console.log("Starting payment slip upload:", file.name, file.size);
-              if (progressWrap) progressWrap.classList.remove('hidden');
-              setProgress(0);
-              msgEl.textContent = 'Uploading payment slip...';
-
-              const storageRef = ref(storage, `payment_slips/${state.user.uid}/${Date.now()}_${file.name}`);
-              const uploadTask = uploadBytesResumable(storageRef, file);
-              slipUrl = await new Promise((resolve, reject) => {
-                const timeoutId = setTimeout(() => {
-                  reject(new Error("Upload timed out (7 seconds limit reached)."));
-                }, 7000);
-
-                uploadTask.on('state_changed',
-                  (snapshot) => {
-                    const pct = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-                    setProgress(isNaN(pct) ? 0 : pct);
-                    msgEl.textContent = `Uploading payment slip... (${isNaN(pct) ? 0 : pct}%)`;
-                  },
-                  (error) => {
-                    clearTimeout(timeoutId);
-                    console.error("Firebase upload error callback:", error);
-                    reject(error);
-                  },
-                  async () => {
-                    clearTimeout(timeoutId);
-                    try {
-                      setProgress(100);
-                      msgEl.textContent = "Upload completed! Getting link...";
-                      const url = await getDownloadURL(uploadTask.snapshot.ref);
-                      resolve(url);
-                    } catch (err) {
-                      console.error("Error getting download URL:", err);
-                      reject(err);
-                    }
-                  }
-                );
-              });
-              await new Promise(r => setTimeout(r, 600));
-            } catch (uploadErr) {
-              console.warn('Image upload failed:', uploadErr);
-              msgEl.className = 'status-message text-red';
-              msgEl.textContent = `⚠️ Slip upload failed: ${uploadErr.message || uploadErr}. Submitting without image...`;
-              await new Promise(r => setTimeout(r, 3000));
-            } finally {
-              if (progressWrap) progressWrap.classList.add('hidden');
-              setProgress(0);
-            }
-          }
-
-          // Step 2: Save to Firestore
-          msgEl.className = 'status-message text-yellow';
-          msgEl.textContent = 'Saving verification request...';
+          // Save to Firestore (no slip upload required)
           const userRef = doc(db, 'users', state.user.uid);
           const selectedPlan = document.getElementById('payment-plan')?.value || '';
           await updateDoc(userRef, {
@@ -552,10 +495,10 @@ export function initFormListeners() {
             paymentTxid: txid,
             paymentPlan: selectedPlan,
             paymentRequestedAt: new Date().toISOString(),
-            ...(slipUrl && { paymentSlipUrl: slipUrl })
+            paymentSlipUrl: null
           });
 
-          // Step 3: Update UI
+          // Update UI
           if (state.profile) state.profile.premiumStatus = 'pending';
           updatePlanBadge('pending');
           msgEl.className = 'status-message text-green';
@@ -570,7 +513,6 @@ export function initFormListeners() {
           console.error('Payment submission error:', err);
         } finally {
           if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Submit Verification Request'; }
-          if (progressWrap) progressWrap.classList.add('hidden');
         }
       }
     });
@@ -1489,16 +1431,27 @@ export function loadAdminPage() {
       pending.forEach(u => {
         const card = document.createElement('div');
         card.className = 'payment-request-card';
+        const requestedPlan = u.paymentPlan || "1 Month";
         card.innerHTML = `
           <div>
             <h4 class="text-white font-medium">${u.displayName || u.email}</h4>
             <p class="text-sm text-gray mt-1">TxID/Ref: <span class="text-yellow font-mono">${u.paymentTxid}</span></p>
+            <p class="text-sm text-gray mt-1">Plan Requested: <span class="text-green font-bold">${requestedPlan}</span></p>
             <p class="text-xs text-gray mt-1">Requested: ${new Date(u.paymentRequestedAt).toLocaleString()}</p>
             ${u.paymentSlipUrl ? `<img src="${u.paymentSlipUrl}" class="payment-slip-thumb cursor-pointer" style="max-width:100px; margin-top:8px; border:1px solid var(--border-color);" onclick="openSlipModal('${u.paymentSlipUrl}')"/>` : ''}
           </div>
-          <div class="action-buttons flex gap-2">
-            <button class="btn btn-primary btn-sm btn-approve" data-id="${u.uid}">Accept</button>
-            <button class="btn btn-secondary btn-sm btn-reject" data-id="${u.uid}">Reject</button>
+          <div class="action-buttons" style="display:flex;flex-direction:column;gap:8px;min-width:160px;">
+            <select class="form-control plan-select" data-id="${u.uid}" style="font-size:0.8rem;padding:6px 10px;">
+              <option value="7 Days" ${requestedPlan === '7 Days' ? 'selected' : ''}>7 Days</option>
+              <option value="2 Weeks" ${requestedPlan === '2 Weeks' ? 'selected' : ''}>2 Weeks</option>
+              <option value="1 Month" ${requestedPlan === '1 Month' ? 'selected' : ''}>1 Month</option>
+              <option value="3 Months" ${requestedPlan === '3 Months' ? 'selected' : ''}>3 Months</option>
+              <option value="Lifetime" ${requestedPlan === 'Lifetime' ? 'selected' : ''}>Lifetime</option>
+            </select>
+            <div style="display:flex;gap:6px;">
+              <button class="btn btn-primary btn-sm btn-approve" data-id="${u.uid}">Accept</button>
+              <button class="btn btn-secondary btn-sm btn-reject" data-id="${u.uid}">Reject</button>
+            </div>
           </div>
         `;
         pendingList.appendChild(card);
@@ -1507,9 +1460,12 @@ export function loadAdminPage() {
       document.querySelectorAll('.btn-approve').forEach(btn => {
         btn.addEventListener('click', async e => {
           const uid = e.target.getAttribute('data-id');
+          const card = e.target.closest(".payment-request-card");
+          const planSelect = card ? card.querySelector(".plan-select") : null;
+          const chosenPlan = planSelect ? planSelect.value : "1 Month";
           e.target.disabled = true;
           e.target.textContent = 'Approving...';
-          await approvePremium(uid);
+          await approvePremium(uid, chosenPlan);
           e.target.textContent = 'Accepted';
         });
       });
@@ -1574,17 +1530,34 @@ export function loadAdminPage() {
 
     // Users list
     if (users.length === 0) {
-      userList.innerHTML = `<tr><td colspan="4" class="text-center py-3 text-gray">No users registered.</td></tr>`;
+      userList.innerHTML = `<tr><td colspan="5" class="text-center py-3 text-gray">No users registered.</td></tr>`;
     } else {
       users.forEach(u => {
         const winLoss = u.winLoss || { wins: 0, losses: 0 };
         const total = winLoss.wins + winLoss.losses;
         const winRate = total > 0 ? ((winLoss.wins / total) * 100).toFixed(1) + '%' : '0%';
+
+        // Compute expiry display
+        let expiryDisplay = '—';
+        if (u.premiumStatus === 'paid') {
+          if (!u.premiumExpiresAt) {
+            expiryDisplay = `<span class="text-green font-bold">♾️ Lifetime</span>`;
+          } else {
+            const exp = new Date(u.premiumExpiresAt);
+            const daysLeft = Math.max(0, Math.ceil((exp - new Date()) / (1000 * 60 * 60 * 24)));
+            const color = daysLeft <= 3 ? 'text-red' : daysLeft <= 7 ? 'text-yellow' : 'text-green';
+            expiryDisplay = `<span class="${color} font-bold">${exp.toLocaleDateString('en-GB')} (${daysLeft}d left)</span>`;
+          }
+        } else if (u.premiumStatus === 'expired') {
+          expiryDisplay = `<span class="text-red">Expired</span>`;
+        }
+
         const row = document.createElement('tr');
         row.innerHTML = `
           <td class="py-3 px-4 text-white font-medium">${u.displayName || 'No Name'}</td>
           <td class="py-3 px-4">${u.email}</td>
-          <td class="py-3 px-4"><span class="badge-${u.premiumStatus === 'paid' ? 'buy' : u.premiumStatus === 'pending' ? 'pending' : 'sell'}">${u.premiumStatus.toUpperCase()}</span></td>
+          <td class="py-3 px-4"><span class="badge-${u.premiumStatus === 'paid' ? 'buy' : u.premiumStatus === 'pending' ? 'pending' : 'sell'}">${(u.premiumStatus || 'free').toUpperCase()}</span></td>
+          <td class="py-3 px-4">${u.activePlan ? `<span class="text-yellow font-bold">${u.activePlan}</span>` : '—'} ${expiryDisplay}</td>
           <td class="py-3 px-4 font-mono text-green">${winLoss.wins}W <span class="text-red">${winLoss.losses}L</span> (${winRate})</td>
         `;
         userList.appendChild(row);
@@ -1903,7 +1876,7 @@ function _setupReferralsUI() {
 
   // Social sharing buttons
   const shareUrl = encodeURIComponent(refLinkInput?.value || "");
-  const shareMsg = encodeURIComponent("Join THINz Banda – Get free crypto signals & AI auto-trading. Use my referral link:");
+  const shareMsg = encodeURIComponent("Join PRIME METRIX Trading – Get free crypto signals & AI auto-trading. Use my referral link:");
   const waBtn  = document.getElementById("share-whatsapp");
   const tgBtn  = document.getElementById("share-telegram");
   const twBtn  = document.getElementById("share-twitter");
@@ -2034,27 +2007,6 @@ function _setupTopupUI() {
     });
   }
 
-  // Drag-and-drop zone
-  const dropZone  = document.getElementById("deposit-drop-zone");
-  const fileInput = document.getElementById("deposit-slip");
-  const dropLabel = document.getElementById("drop-label");
-  const dropName  = document.getElementById("drop-file-name");
-  if (dropZone && fileInput) {
-    dropZone.addEventListener("dragover",  e => { e.preventDefault(); dropZone.classList.add("drag-over"); });
-    dropZone.addEventListener("dragleave", ()  => dropZone.classList.remove("drag-over"));
-    dropZone.addEventListener("drop", e => {
-      e.preventDefault();
-      dropZone.classList.remove("drag-over");
-      if (e.dataTransfer.files.length) {
-        fileInput.files = e.dataTransfer.files;
-        _updateDropZonePreview(e.dataTransfer.files[0], dropLabel, dropName);
-      }
-    });
-    fileInput.addEventListener("change", () => {
-      if (fileInput.files.length) _updateDropZonePreview(fileInput.files[0], dropLabel, dropName);
-    });
-  }
-
   // Wallet deposit form submit
   const depositForm = document.getElementById("wallet-deposit-form");
   if (depositForm && !depositForm.dataset.listenerWired) {
@@ -2067,14 +2019,6 @@ function _setupTopupUI() {
       const txid      = document.getElementById("deposit-txid")?.value.trim();
       const msgEl     = document.getElementById("deposit-msg");
       const submitBtn = document.getElementById("btn-submit-deposit");
-      const progressWrap = document.getElementById("deposit-upload-progress-wrap");
-      const progressBar  = document.getElementById("deposit-upload-progress-bar");
-      const progressPct  = document.getElementById("deposit-upload-progress-pct");
-
-      const setProgress = pct => {
-        if (progressBar) progressBar.style.width = pct + "%";
-        if (progressPct) progressPct.textContent  = pct + "%";
-      };
 
       if (isNaN(usdAmount) || usdAmount <= 0) {
         if (msgEl) { msgEl.className = "status-message text-red"; msgEl.textContent = "Please enter a valid USD amount."; }
@@ -2086,46 +2030,16 @@ function _setupTopupUI() {
       }
 
       if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "Submitting..."; }
-      if (msgEl) { msgEl.className = "status-message text-yellow"; msgEl.textContent = "Uploading receipt slip..."; }
+      if (msgEl) { msgEl.className = "status-message text-yellow"; msgEl.textContent = "Saving deposit request..."; }
 
-      let slipUrl = null;
-      try {
-        const fInput = document.getElementById("deposit-slip");
-        if (fInput && fInput.files.length > 0) {
-          const file = fInput.files[0];
-          if (progressWrap) progressWrap.classList.remove("hidden");
-          setProgress(0);
-          const storageRef = ref(storage, `deposit_slips/${state.user.uid}/${Date.now()}_${file.name}`);
-          const uploadTask = uploadBytesResumable(storageRef, file);
-          slipUrl = await new Promise((resolve, reject) => {
-            const tid = setTimeout(() => reject(new Error("Upload timed out.")), 8000);
-            uploadTask.on("state_changed",
-              snap => { const pct = Math.round((snap.bytesTransferred / snap.totalBytes) * 100); setProgress(isNaN(pct) ? 0 : pct); },
-              err  => { clearTimeout(tid); reject(err); },
-              async () => { clearTimeout(tid); setProgress(100); const url = await getDownloadURL(uploadTask.snapshot.ref); resolve(url); }
-            );
-          });
-          await new Promise(r => setTimeout(r, 500));
-        }
-      } catch (uploadErr) {
-        console.error("Slip upload failed:", uploadErr);
-        if (msgEl) { msgEl.className = "status-message text-red"; msgEl.textContent = `Receipt upload failed: ${uploadErr.message}`; }
-        if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Submit Top-Up Request`; }
-        if (progressWrap) progressWrap.classList.add("hidden");
-        return;
-      } finally {
-        if (progressWrap) progressWrap.classList.add("hidden");
-        setProgress(0);
-      }
-
-      // Save to Firestore user doc (for admin panel)
+      // Save to Firestore user doc (for admin panel) - no slip upload required
       try {
         const userRef = doc(db, "users", state.user.uid);
         await updateDoc(userRef, {
           topupStatus: "pending",
           topupAmount: usdAmount,
           topupTxid: txid,
-          topupSlipUrl: slipUrl,
+          topupSlipUrl: null,
           topupRequestedAt: new Date().toISOString()
         });
 
@@ -2137,7 +2051,7 @@ function _setupTopupUI() {
           displayName: state.profile?.displayName || "",
           amount:      usdAmount,
           txid:        txid,
-          slipUrl:     slipUrl,
+          slipUrl:     null,
           status:      "pending",
           requestedAt: new Date().toISOString()
         });
