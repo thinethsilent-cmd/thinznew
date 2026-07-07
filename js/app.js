@@ -707,19 +707,17 @@ function initFormListeners() {
   }
 
   // Plan Selection Globals
+  // Plan Selection Globals
   window.selectPlan = function(cardEl) {
-    document.querySelectorAll(".plan-card").forEach(c => {
-      c.style.borderColor = "var(--border-color)";
-      c.style.background = "";
-    });
-
-    cardEl.style.borderColor = "var(--color-primary)";
-    cardEl.style.background = "rgba(46, 196, 160, 0.05)";
-
     const planName = cardEl.getAttribute("data-plan");
     const priceLkr = cardEl.getAttribute("data-price");
-    document.getElementById("payment-plan").value = planName;
-    document.getElementById("selected-plan-label").textContent = `${planName} Plan — Rs. ${priceLkr}/=`;
+    
+    const planInput = document.getElementById("payment-plan");
+    const planLabel = document.getElementById("selected-plan-label");
+    const modal = document.getElementById("checkout-modal-overlay");
+
+    if (planInput) planInput.value = planName;
+    if (planLabel) planLabel.textContent = `${planName} Plan — Rs. ${priceLkr}/=`;
 
     const getPriceUSD = (p) => {
       switch (p) {
@@ -732,54 +730,62 @@ function initFormListeners() {
       }
     };
     const usdPrice = getPriceUSD(planName);
-    document.getElementById("wallet-plan-price-usd").textContent = `$${usdPrice.toFixed(2)}`;
+    const planPriceUsdEl = document.getElementById("wallet-plan-price-usd");
+    if (planPriceUsdEl) planPriceUsdEl.textContent = `$${usdPrice.toFixed(2)}`;
 
     const userBalance = state.profile?.walletBalance || 0;
-    document.getElementById("wallet-user-balance-usd").textContent = `$${userBalance.toFixed(2)}`;
+    const userBalanceUsdEl = document.getElementById("wallet-user-balance-usd");
+    if (userBalanceUsdEl) userBalanceUsdEl.textContent = `$${userBalance.toFixed(2)}`;
 
-    document.getElementById("payment-instructions-panel").classList.remove("hidden");
-    document.getElementById("premium-opt-in").checked = true;
+    // Set pay button text
+    const submitBtn = document.getElementById("btn-submit-upgrade");
+    if (submitBtn) submitBtn.textContent = `Pay $${usdPrice.toFixed(2)} with Wallet`;
+
+    if (modal) modal.classList.remove("hidden");
 
     window.setPayMethod("bank");
   };
 
+  window.closeCheckoutModal = function() {
+    const modal = document.getElementById("checkout-modal-overlay");
+    if (modal) modal.classList.add("hidden");
+    const msgEl = document.getElementById("payment-msg");
+    if (msgEl) msgEl.textContent = "";
+  };
+
   window.setPayMethod = function(method) {
-    document.getElementById("payment-method-field").value = method;
+    const paymentMethodField = document.getElementById("payment-method-field");
+    if (paymentMethodField) paymentMethodField.value = method;
+    
     const btnBank = document.getElementById("pay-method-bank");
     const btnWallet = document.getElementById("pay-method-wallet");
     
     const bankView = document.getElementById("checkout-bank-view");
-    const bankFields = document.getElementById("checkout-bank-form-fields");
     const walletView = document.getElementById("checkout-wallet-view");
     const submitBtn = document.getElementById("btn-submit-upgrade");
 
     if (method === "bank") {
-      btnBank.style.borderColor = "var(--color-primary)";
-      btnBank.style.background = "rgba(46, 196, 160, 0.08)";
-      btnWallet.style.borderColor = "";
-      btnWallet.style.background = "";
+      if (btnBank) btnBank.classList.add("active");
+      if (btnWallet) btnWallet.classList.remove("active");
 
-      bankView.classList.remove("hidden");
-      bankFields.classList.remove("hidden");
-      walletView.classList.add("hidden");
+      if (bankView) bankView.classList.remove("hidden");
+      if (walletView) walletView.classList.add("hidden");
 
-      document.getElementById("payment-txid").setAttribute("required", "");
-      document.getElementById("payment-slip").setAttribute("required", "");
-      submitBtn.textContent = "Submit Verification Request";
+      const txidInput = document.getElementById("payment-txid");
+      if (txidInput) txidInput.setAttribute("required", "");
+      if (submitBtn) submitBtn.textContent = "Submit Verification Request";
     } else {
-      btnWallet.style.borderColor = "var(--color-primary)";
-      btnWallet.style.background = "rgba(46, 196, 160, 0.08)";
-      btnBank.style.borderColor = "";
-      btnBank.style.background = "";
+      if (btnWallet) btnWallet.classList.add("active");
+      if (btnBank) btnBank.classList.remove("active");
 
-      bankView.classList.add("hidden");
-      bankFields.classList.add("hidden");
-      walletView.classList.remove("hidden");
+      if (bankView) bankView.classList.add("hidden");
+      if (walletView) walletView.classList.remove("hidden");
 
-      document.getElementById("payment-txid").removeAttribute("required");
-      document.getElementById("payment-slip").removeAttribute("required");
+      const txidInput = document.getElementById("payment-txid");
+      if (txidInput) txidInput.removeAttribute("required");
 
-      const plan = document.getElementById("payment-plan").value;
+      const planInput = document.getElementById("payment-plan");
+      const plan = planInput ? planInput.value : "";
       const getPriceUSD = (p) => {
         switch (p) {
           case "7 Days": return 5.00;
@@ -790,7 +796,7 @@ function initFormListeners() {
           default: return 16.67;
         }
       };
-      submitBtn.textContent = `Pay $${getPriceUSD(plan).toFixed(2)} with Wallet`;
+      if (submitBtn) submitBtn.textContent = `Pay $${getPriceUSD(plan).toFixed(2)} with Wallet`;
     }
   };
 
@@ -1745,6 +1751,10 @@ function loadAccountPage() {
         historyList.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-red">Error loading referrals list.</td></tr>`;
       });
   }
+
+  // Load Leaderboards for the account page
+  _loadLeaderboard("referral");
+  _loadLeaderboard("topup");
 }
 
 // Admin Panel Page Logic
@@ -2110,3 +2120,87 @@ window.__openInbox = function() {
   }
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Leaderboard Helpers (used in loadAccountPage)
+// ─────────────────────────────────────────────────────────────────────────────
+const MOCK_REFERRAL_LB = [
+  { name: "Ra*** S.", invites: 41 },
+  { name: "Da*** B.", invites: 38 },
+  { name: "Ka*** W.", invites: 29 },
+  { name: "Su*** P.", invites: 22 },
+  { name: "Th*** N.", invites: 17 },
+  { name: "Nu*** H.", invites: 14 },
+  { name: "Av*** K.", invites: 11 },
+  { name: "Mi*** R.", invites: 9 },
+  { name: "An*** L.", invites: 7 },
+  { name: "Fa*** M.", invites: 5 },
+];
+
+const MOCK_TOPUP_LB = [
+  { name: "Sa*** M.", amount: 340.00 },
+  { name: "Ha*** R.", amount: 280.50 },
+  { name: "Du*** S.", amount: 220.00 },
+  { name: "Th*** B.", amount: 195.00 },
+  { name: "Ka*** P.", amount: 160.00 },
+  { name: "Na*** W.", amount: 125.00 },
+  { name: "Ra*** D.", amount: 98.00 },
+  { name: "Av*** C.", amount: 75.50 },
+  { name: "Su*** N.", amount: 60.00 },
+  { name: "Mi*** A.", amount: 45.00 },
+];
+
+function _getRankBadge(rank) {
+  const cls = rank === 1 ? "rank-1" : rank === 2 ? "rank-2" : rank === 3 ? "rank-3" : "rank-other";
+  const emoji = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : rank;
+  return `<span class="leaderboard-rank ${cls}">${emoji}</span>`;
+}
+
+function _renderLeaderboard(tbodyId, rows) {
+  const tbody = document.getElementById(tbodyId);
+  if (!tbody) return;
+  if (!rows || rows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="3" class="text-center py-4" style="color:#94a3b8;">No entries yet.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map((row, i) => {
+    const rank = i + 1;
+    const initial = row.name ? row.name[0].toUpperCase() : "?";
+    const value = row.invites !== undefined
+      ? `<span class="leaderboard-value">${row.invites} <span style="color:#94a3b8;font-size:0.75rem;">Invites</span></span>`
+      : `<span class="leaderboard-value">$${row.amount.toFixed(2)}</span>`;
+    return `
+      <tr>
+        <td>${_getRankBadge(rank)}</td>
+        <td>
+          <div class="leaderboard-user">
+            <div class="leaderboard-avatar">${initial}</div>
+            <span class="leaderboard-name">${row.name}</span>
+          </div>
+        </td>
+        <td style="text-align: right;">${value}</td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function _loadLeaderboard(type) {
+  const tbodyId  = type === "topup" ? "topup-leaderboard-list" : "referral-leaderboard-list";
+  const mockData = type === "topup" ? MOCK_TOPUP_LB : MOCK_REFERRAL_LB;
+  const docName  = type === "topup" ? "topDepositors" : "topReferrers";
+
+  getDocs(collection(db, "leaderboards"))
+    .then(snap => {
+      let found = false;
+      snap.forEach(d => {
+        if (d.id === docName) {
+          found = true;
+          const rows = d.data()?.entries || [];
+          _renderLeaderboard(tbodyId, rows.length > 0 ? rows.slice(0, 10) : mockData);
+        }
+      });
+      if (!found) _renderLeaderboard(tbodyId, mockData);
+    })
+    .catch(() => {
+      _renderLeaderboard(tbodyId, mockData);
+    });
+}

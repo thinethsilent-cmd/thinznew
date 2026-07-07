@@ -104,50 +104,76 @@
   </header>
 
   <!-- HOME SECTION -->
-  <section id="page-home">
-    <div class="container hero-wrapper">
-      <div>
-        <h1 class="hero-title">Automate Your Binance Trades With <span>AI-Powered Signals</span></h1>
-        <p class="hero-subtitle">Get top-tier AI trading signals from 550+ coins and deploy our 97% accuracy bot via official Binance API. Set it up and let the algorithm trade for you.</p>
-        <div class="hero-cta">
-          <a href="#auth" class="btn btn-primary btn-pulse guest-link">Create Free Account</a>
-          <a href="#account" class="btn btn-secondary">Upgrade to Premium</a>
+  <section id="page-home" class="page-home-premium">
+    <!-- Character Graphics on the sides -->
+    <img src="images/character-left.png" alt="Game Character" class="hero-char-left">
+    <img src="images/character-right.png" alt="Game Character" class="hero-char-right">
+
+    <div class="container hero-wrapper-premium">
+      <h1 class="hero-title-premium">
+        Automate Binance Trades With <span>AI-Powered Signals</span>
+      </h1>
+      <p class="hero-subtitle-premium">
+        Get high-accuracy crypto signals from 550+ coins and deploy our auto-trading bot via official Binance API. Let the algorithm trade for you instantly.
+      </p>
+      <div class="hero-cta">
+        <a href="#auth" class="btn btn-primary btn-pulse guest-link" style="padding: 14px 32px; border-radius: 30px; font-size: 1.05rem;">Start Trading Free</a>
+        <a href="#account" class="btn btn-secondary" style="padding: 14px 32px; border-radius: 30px; font-size: 1.05rem;">Top Up & Upgrade</a>
+      </div>
+    </div>
+
+    <!-- Overlapping Scrolling Marquees -->
+    <div class="marquees-container">
+      <div class="marquee-angled marquee-angled-1">
+        <div class="marquee-content-premium">
+          <span>24/7 Support</span>
+          <span>Instant Execution</span>
+          <span>97% Bot Win Rate</span>
+          <span>Secure Payments</span>
+          <span>10K+ Trusted Users</span>
+          <span>Official Binance API</span>
+          <!-- Duplicate for infinite scroll -->
+          <span>24/7 Support</span>
+          <span>Instant Execution</span>
+          <span>97% Bot Win Rate</span>
+          <span>Secure Payments</span>
+          <span>10K+ Trusted Users</span>
+          <span>Official Binance API</span>
+          <!-- Triple it to make sure it covers screen width -->
+          <span>24/7 Support</span>
+          <span>Instant Execution</span>
+          <span>97% Bot Win Rate</span>
+          <span>Secure Payments</span>
+          <span>10K+ Trusted Users</span>
+          <span>Official Binance API</span>
         </div>
       </div>
-      <div class="hero-illustration">
-        <div class="hero-glow-card">
-          <div class="flex justify-between items-center mb-4" style="margin-bottom: 20px;">
-            <span class="text-white font-bold" style="font-size: 1.1rem;">Trading Performance</span>
-            <span class="badge-buy font-bold" style="padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">+148.6%
-              Monthly</span>
-          </div>
-          <div style="height: 160px; display: flex; align-items: flex-end; gap: 10px; margin-bottom: 20px;">
-            <div
-              style="height: 40%; flex: 1; background: linear-gradient(to top, var(--color-primary), #ffa800); border-radius: 6px 6px 0 0;">
-            </div>
-            <div
-              style="height: 60%; flex: 1; background: linear-gradient(to top, var(--color-primary), #ffa800); border-radius: 6px 6px 0 0;">
-            </div>
-            <div
-              style="height: 55%; flex: 1; background: linear-gradient(to top, var(--color-primary), #ffa800); border-radius: 6px 6px 0 0;">
-            </div>
-            <div
-              style="height: 75%; flex: 1; background: linear-gradient(to top, var(--color-primary), #ffa800); border-radius: 6px 6px 0 0;">
-            </div>
-            <div
-              style="height: 95%; flex: 1; background: linear-gradient(to top, var(--color-buy), #00ffbc); border-radius: 6px 6px 0 0; box-shadow: var(--glow-green);">
-            </div>
-          </div>
-          <div class="flex justify-between text-gray" style="font-size: 0.8rem;">
-            <span>Week 1</span>
-            <span>Week 2</span>
-            <span>Week 3</span>
-            <span>Week 4</span>
-            <span>Current</span>
-          </div>
+      <div class="marquee-angled marquee-angled-2">
+        <div class="marquee-content-premium" style="animation-direction: reverse;">
+          <span>100+ Daily Signals</span>
+          <span>Zero Withdrawal Access</span>
+          <span>Real-time PnL</span>
+          <span>Encrypted API Keys</span>
+          <span>Live Technical Scanner</span>
+          <span>VIP Community Chat</span>
+          <!-- Duplicate for infinite scroll -->
+          <span>100+ Daily Signals</span>
+          <span>Zero Withdrawal Access</span>
+          <span>Real-time PnL</span>
+          <span>Encrypted API Keys</span>
+          <span>Live Technical Scanner</span>
+          <span>VIP Community Chat</span>
+          <!-- Triple it -->
+          <span>100+ Daily Signals</span>
+          <span>Zero Withdrawal Access</span>
+          <span>Real-time PnL</span>
+          <span>Encrypted API Keys</span>
+          <span>Live Technical Scanner</span>
+          <span>VIP Community Chat</span>
         </div>
       </div>
     </div>
+  </section>
 
     <!-- Stats Section -->
     <div class="stats-section">
@@ -786,91 +812,9 @@
               <span>Priority Support & Signal Alerts</span>
             </li>
           </ul>
-
-          <div class="switch-group" style="border-top: 1px solid var(--border-color); padding-top: 20px;">
-            <label for="premium-opt-in">Apply for Premium Account</label>
-            <label class="switch">
-              <input type="checkbox" id="premium-opt-in">
-              <span class="slider"></span>
-            </label>
-          </div>
-
-          <!-- Payment Instructions -->
-          <div id="payment-instructions-panel" class="payment-box hidden">
-            <!-- Selected plan amount display -->
-            <div id="selected-plan-display"
-              style="background: rgba(255,198,0,0.08); border: 1px solid rgba(255,198,0,0.3); border-radius: 10px; padding: 12px 16px; margin: 14px 0; display: flex; justify-content: space-between; align-items: center;">
-              <span class="text-gray" style="font-size:0.85rem;">Selected Plan</span>
-              <span id="selected-plan-label"
-                style="color: var(--color-primary); font-weight: 800; font-size: 1.05rem;">— Select a plan above —</span>
-            </div>
-
-            <!-- Payment Method Toggle -->
-            <div class="form-group" style="margin-bottom: 20px;">
-              <label style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 700; text-transform: uppercase;">Payment Method</label>
-              <div style="display: flex; gap: 10px; margin-top: 6px;">
-                <button type="button" id="pay-method-bank" class="btn btn-secondary btn-sm" style="flex: 1; border-color: var(--color-primary); background: rgba(46, 196, 160, 0.08);" onclick="window.setPayMethod('bank')">Bank Transfer</button>
-                <button type="button" id="pay-method-wallet" class="btn btn-secondary btn-sm" style="flex: 1;" onclick="window.setPayMethod('wallet')">Pay with Wallet Balance</button>
-              </div>
-            </div>
-
-            <!-- Bank Transfer View -->
-            <div id="checkout-bank-view">
-              <h4 class="text-white">Commercial Bank Payment Details</h4>
-              <p class="text-gray" style="font-size: 0.85rem; margin-top: 5px; line-height: 1.4; margin-bottom: 12px;">
-                Transfer the exact amount for your selected plan to the account below, then upload your receipt slip.
-              </p>
-
-              <!-- Bank details -->
-              <div
-                style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; margin: 15px 0; text-align: left; font-size: 0.9rem;">
-                <div style="margin-bottom: 8px;"><span class="text-gray">Bank Name:</span> <strong
-                    class="text-white">Commercial Bank of Ceylon</strong></div>
-                <div style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-                  <div><span class="text-gray">Account Number:</span> <strong
-                      class="text-white font-mono">8020391115</strong></div>
-                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
-                    onclick="navigator.clipboard.writeText('8020391115'); this.style.color='#00ff88'; setTimeout(()=>this.style.color='',1500);"
-                    style="cursor:pointer; color:var(--color-primary); transition:color .3s;" title="Copy account number">
-                    <path stroke-linecap="round" stroke-linejoin="round"
-                      d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3">
-                    </path>
-                  </svg>
-                </div>
-                <div><span class="text-gray">Account Name:</span> <strong class="text-white">thineth bandara</strong>
-                </div>
-              </div>
-            </div>
-
-            <!-- Wallet checkout view (Initially hidden) -->
-            <div id="checkout-wallet-view" class="hidden" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px; padding: 18px; margin: 15px 0; font-size: 0.95rem;">
-              <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                <span class="text-gray">Plan Price (USD):</span>
-                <strong id="wallet-plan-price-usd" class="text-white font-mono">$0.00</strong>
-              </div>
-              <div style="display: flex; justify-content: space-between; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,0.06);">
-                <span class="text-gray">Your Wallet Balance:</span>
-                <strong id="wallet-user-balance-usd" class="text-white font-mono">$0.00</strong>
-              </div>
-            </div>
-
-            <form id="premium-payment-form" style="margin-top: 15px;">
-              <!-- Hidden fields -->
-              <input type="hidden" id="payment-plan" value="">
-              <input type="hidden" id="payment-method-field" value="bank"> <!-- 'bank' or 'wallet' -->
-
-              <div id="checkout-bank-form-fields">
-                <div class="form-group">
-                  <label for="payment-txid">Reference ID / TxID</label>
-                  <input type="text" id="payment-txid" class="form-control font-mono"
-                    placeholder="Enter transfer reference ID">
-                </div>
-              </div>
-
-              <button type="submit" id="btn-submit-upgrade" class="btn btn-primary" style="width: 100%;">Submit Verification Request</button>
-
-              <div id="payment-msg" class="status-message text-center mt-4"></div>
-            </form>
+          <!-- Payment Checkout is triggered directly by clicking the plan cards above -->
+          <div style="font-size:0.85rem; color:var(--text-muted); margin-top:15px; border-top:1px solid var(--border-color); padding-top:15px;">
+            💡 Click any VIP Plan card above to open the instant checkout panel.
           </div>
         </div>
       </div>
@@ -994,6 +938,28 @@
             </table>
           </div>
         </div>
+
+        <!-- Referral Leaderboard Card -->
+        <div class="leaderboard-card" style="margin-top: 30px;">
+          <h3 class="leaderboard-title">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--color-primary);"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            Referral Leaderboard
+          </h3>
+          <div class="table-wrapper" style="border-radius: 12px; border: 1px solid var(--border-color); overflow: hidden;">
+            <table class="leaderboard-table">
+              <thead>
+                <tr>
+                  <th style="width: 60px;">Rank</th>
+                  <th>User</th>
+                  <th style="text-align: right;">Successful Invites</th>
+                </tr>
+              </thead>
+              <tbody id="referral-leaderboard-list">
+                <!-- Loaded dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
       <!-- Wallet Top-Up Panel -->
@@ -1073,6 +1039,28 @@
             <div style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.4; border-top: 1px dashed rgba(255,255,255,0.06); padding-top: 15px;">
               💡 <strong>Instant VIP Upgrade:</strong> You can pay for any VIP plan directly with your wallet balance. Just select a plan and choose the "Pay via Wallet Balance" option.
             </div>
+          </div>
+        </div>
+
+        <!-- Top-Up Leaderboard Card -->
+        <div class="leaderboard-card" style="margin-top: 28px;">
+          <h3 class="leaderboard-title">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--color-buy);"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            Top Depositors
+          </h3>
+          <div class="table-wrapper" style="border-radius: 12px; border: 1px solid var(--border-color); overflow: hidden;">
+            <table class="leaderboard-table">
+              <thead>
+                <tr>
+                  <th style="width: 60px;">Rank</th>
+                  <th>User</th>
+                  <th style="text-align: right;">Total Deposited</th>
+                </tr>
+              </thead>
+              <tbody id="topup-leaderboard-list">
+                <!-- Loaded dynamically -->
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -1301,34 +1289,7 @@
       }
     }
 
-    // Pricing plan selection
-    function selectPlan(el) {
-      // Remove selection from all cards
-      document.querySelectorAll('.plan-card').forEach(card => {
-        card.style.boxShadow = 'none';
-        card.style.transform = 'none';
-        // Reset border for non-special cards
-        if (!card.classList.contains('plan-popular') && !card.classList.contains('plan-lifetime')) {
-          card.style.borderColor = 'var(--border-color)';
-        }
-      });
-
-      // Highlight chosen card
-      el.style.boxShadow = '0 0 0 3px var(--color-primary), 0 8px 30px rgba(255,198,0,0.2)';
-      el.style.transform = 'translateY(-3px)';
-      if (!el.classList.contains('plan-popular') && !el.classList.contains('plan-lifetime')) {
-        el.style.borderColor = 'var(--color-primary)';
-      }
-
-      // Update the plan label in the payment box
-      const plan = el.getAttribute('data-plan');
-      const price = el.getAttribute('data-price');
-      const label = document.getElementById('selected-plan-label');
-      const hiddenPlan = document.getElementById('payment-plan');
-      if (label) label.textContent = plan + ' — Rs. ' + price + '/=';
-      // Store just the plan name (e.g. "7 Days", "1 Month") for Firestore
-      if (hiddenPlan) hiddenPlan.value = plan;
-    }
+    // Pricing plan selection delegated to global selectPlan in app.js
   </script>
 
 
@@ -1446,6 +1407,71 @@
     document.querySelectorAll('.reveal, .reveal-left, .reveal-right').forEach(el => revealObserver.observe(el));
   </script>
 
-</body>
+  <!-- Checkout Modal Overlay -->
+  <div id="checkout-modal-overlay" class="checkout-modal-overlay hidden">
+    <div class="checkout-modal">
+      <div class="checkout-header">
+        <h3 id="checkout-modal-title">Checkout VIP Plan</h3>
+        <button class="btn-close-modal" onclick="window.closeCheckoutModal()">✕</button>
+      </div>
+      <div class="checkout-body">
+        <!-- Plan Summary -->
+        <div id="selected-plan-display"
+          style="background: rgba(0, 102, 255, 0.05); border: 1px solid rgba(0, 102, 255, 0.1); border-radius: 12px; padding: 14px 18px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-size:0.82rem; color:#64748b; font-weight: 700; text-transform: uppercase;">Selected Plan</span>
+          <span id="selected-plan-label" style="color: #0066ff; font-weight: 800; font-size: 1.05rem;">— Select a plan —</span>
+        </div>
 
+        <!-- Payment Method Tabs -->
+        <div class="checkout-tabs">
+          <button type="button" id="pay-method-bank" class="checkout-tab-btn active" onclick="window.setPayMethod('bank')">Bank Transfer</button>
+          <button type="button" id="pay-method-wallet" class="checkout-tab-btn" onclick="window.setPayMethod('wallet')">Pay with Wallet</button>
+        </div>
+
+        <form id="premium-payment-form">
+          <input type="hidden" id="payment-plan" value="">
+          <input type="hidden" id="payment-method-field" value="bank">
+
+          <!-- Bank Transfer View -->
+          <div id="checkout-bank-view">
+            <h4 style="font-size: 0.9rem; font-weight: 800; color: #0f172a; margin-bottom: 6px;">LKR Bank Details</h4>
+            <p class="text-gray" style="font-size: 0.8rem; line-height: 1.5; margin-bottom: 12px; color: #475569;">
+              Transfer the exact LKR amount for your selected plan to the account below, then input your Reference ID.
+            </p>
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-bottom: 14px; font-size: 0.85rem; display: flex; flex-direction: column; gap: 6px;">
+              <div><span class="text-gray" style="font-weight:600;">Bank:</span> <strong style="color:#0f172a;">Commercial Bank of Ceylon</strong></div>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div><span class="text-gray" style="font-weight:600;">Acc Number:</span> <strong class="font-mono" style="color:#0f172a;">8020391115</strong></div>
+                <button type="button" onclick="navigator.clipboard.writeText('8020391115');this.textContent='✓';setTimeout(()=>this.textContent='Copy',1500);" class="btn btn-secondary btn-xs" style="padding: 2px 8px; font-size: 0.7rem;">Copy</button>
+              </div>
+              <div><span class="text-gray" style="font-weight:600;">Acc Name:</span> <strong style="color:#0f172a;">thineth bandara</strong></div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 15px;">
+              <label for="payment-txid" style="font-size:0.8rem; font-weight:700; color:#475569; display:block; margin-bottom:4px;">Reference ID / TxID</label>
+              <input type="text" id="payment-txid" class="form-control font-mono" placeholder="Enter transfer reference ID" style="background:#fff; border: 1px solid #cbd5e1; color:#0f172a; padding: 12px;">
+            </div>
+          </div>
+
+          <!-- Wallet Checkout View -->
+          <div id="checkout-wallet-view" class="hidden" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 14px; font-size: 0.88rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+              <span class="text-gray" style="font-weight:600;">Plan Price (USD):</span>
+              <strong id="wallet-plan-price-usd" style="color:#0f172a; font-family:'JetBrains Mono',monospace;">$0.00</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding-top: 8px; border-top: 1px dashed #e2e8f0;">
+              <span class="text-gray" style="font-weight:600;">Your Wallet Balance:</span>
+              <strong id="wallet-user-balance-usd" style="color:#0f172a; font-family:'JetBrains Mono',monospace;">$0.00</strong>
+            </div>
+          </div>
+
+          <button type="submit" id="btn-submit-upgrade" class="btn btn-primary" style="width: 100%; border-radius: 12px; padding: 12px; font-weight: 800; font-size: 0.9rem;">Submit Verification Request</button>
+
+          <div id="payment-msg" class="status-message text-center mt-3" style="font-size: 0.85rem;"></div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+</body>
 </html>
