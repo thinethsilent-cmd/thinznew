@@ -147,6 +147,86 @@ function getSupportResistance(highs, lows, closes, atr) {
   return { resistance, support, atrMultiplierTP, atrMultiplierSL };
 }
 
+// ── Elliott Wave Theory Detection ────────────────────────────────────────────
+// Identifies swing points and checks for classic 5-wave impulse or ABC correction.
+// Returns { wave, direction, confidence, label }
+function calcElliottWave(highs, lows, closes) {
+  const n = closes.length;
+  if (n < 50) return null;
+
+  // Find local swing highs and lows (pivot points) over the last 60 bars
+  const window = 3; // bars either side
+  const swingHighs = [];
+  const swingLows  = [];
+  const slice = Math.min(n, 80);
+  const offset = n - slice;
+
+  for (let i = window; i < slice - window; i++) {
+    const isHigh = highs.slice(i - window, i + window + 1).every(h => highs[i + offset] >= h);
+    const isLow  = lows.slice(i - window, i + window + 1).every(l => lows[i + offset] <= l);
+    if (isHigh) swingHighs.push({ idx: i + offset, price: highs[i + offset] });
+    if (isLow)  swingLows.push({ idx: i + offset, price: lows[i + offset] });
+  }
+
+  if (swingHighs.length < 3 || swingLows.length < 3) return null;
+
+  const lastClose = closes[n - 1];
+
+  // ── Bullish Elliott Setup: 5-wave impulse UP ─────────────────────────
+  // W1: swing low → high. W2: retrace. W3: new high > W1 top. W4: retrace.
+  // W5: new high or near W3 top → look for long at end of W4 or early W5.
+  // Simplified: detect W3 peak (highest high in pattern), W4 correction, W5 setup.
+  const recentLows  = swingLows.slice(-4);
+  const recentHighs = swingHighs.slice(-4);
+
+  if (recentLows.length >= 2 && recentHighs.length >= 2) {
+    const w1Low  = recentLows[recentLows.length - 3]?.price;
+    const w1High = recentHighs[recentHighs.length - 3]?.price;
+    const w2Low  = recentLows[recentLows.length - 2]?.price;
+    const w3High = recentHighs[recentHighs.length - 2]?.price;
+    const w4Low  = recentLows[recentLows.length - 1]?.price;
+    const w5High = recentHighs[recentHighs.length - 1]?.price;
+
+    // 5-Wave bullish impulse rules:
+    // W3 > W1 high, W4 does not dip below W1 high, W5 near or above W3 high
+    if (w1Low && w1High && w2Low && w3High && w4Low) {
+      const w3IsExtended = w3High > w1High * 1.01; // W3 breaks W1 top
+      const w4Shallow   = w4Low > w1High * 0.99;  // W4 stays above W1 top
+      const priceInW4   = lastClose <= w4Low * 1.05 && lastClose >= w4Low * 0.95;
+      const priceInW5   = w5High && lastClose > w4Low && lastClose < w3High;
+
+      if (w3IsExtended && w4Shallow) {
+        if (priceInW4) {
+          return { wave: 4, direction: "BUY", confidence: 4,
+            label: "Elliott W4 Correction — BUY setup into W5 impulse" };
+        }
+        if (priceInW5) {
+          return { wave: 5, direction: "BUY", confidence: 2,
+            label: "Elliott W5 Impulse — BUY (early stage)" };
+        }
+        // W3 just printed — strongest wave
+        return { wave: 3, direction: "BUY", confidence: 4,
+          label: "Elliott W3 Impulse — Strongest bullish wave" };
+      }
+    }
+
+    // ── Bearish Elliott: ABC Corrective wave or 5-wave down ──────────────
+    const aHigh = recentHighs[recentHighs.length - 2]?.price;
+    const bLow  = recentLows[recentLows.length - 2]?.price;
+    const cHigh = recentHighs[recentHighs.length - 1]?.price;
+
+    if (aHigh && bLow && cHigh) {
+      const abcPattern = cHigh < aHigh && bLow < aHigh && lastClose < cHigh;
+      if (abcPattern) {
+        return { wave: "C", direction: "SELL", confidence: 3,
+          label: "Elliott ABC Correction — SELL near Wave C top" };
+      }
+    }
+  }
+
+  return null;
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 //  MAIN SIGNAL ENGINE  –  Analyse a single coin using all indicators
 // ══════════════════════════════════════════════════════════════════════════════
@@ -289,6 +369,18 @@ export async function analyseSymbol(symbol, interval = "1h", force = false) {
       reasons.push("Strong bearish engulfing candle");
     }
 
+    // 7. Elliott Wave Theory
+    const ew = calcElliottWave(highs, lows, closes);
+    if (ew) {
+      if (ew.direction === "BUY") {
+        bullScore += ew.confidence;
+        reasons.push(ew.label);
+      } else if (ew.direction === "SELL") {
+        bearScore += ew.confidence;
+        reasons.push(ew.label);
+      }
+    }
+
     // ── Minimum signal threshold ──────────────────────────────────────────
     const MIN_SCORE = 5; // Require strong confluence
     const isBull = bullScore >= MIN_SCORE && bullScore > bearScore;
@@ -325,7 +417,7 @@ export async function analyseSymbol(symbol, interval = "1h", force = false) {
     const rrr    = (reward / risk).toFixed(2);
 
     // ── Accuracy score (based on number of confluent indicators) ─────────
-    const maxScore  = 14; // theoretical max
+    const maxScore  = 18; // theoretical max (14 TA + 4 Elliott Wave)
     const rawAccuracy = Math.min(97, 78 + (score / maxScore) * 20);
     const accuracy  = rawAccuracy.toFixed(1) + "%";
 
@@ -341,7 +433,8 @@ export async function analyseSymbol(symbol, interval = "1h", force = false) {
     const tfLabel = { "15m": "15M", "1h": "1H", "4h": "4H", "1d": "1D" }[interval] || "1H";
 
     // ── Analysis summary for display ─────────────────────────────────────
-    const analysisText = reasons.slice(0, 3).join(" | ");
+    const analysisText = reasons.slice(0, 4).join(" | ");
+    const ewLabel = ew ? ew.label : null;
 
     return {
       id: `ta-${symbol}-${Date.now()}`,
@@ -358,6 +451,7 @@ export async function analyseSymbol(symbol, interval = "1h", force = false) {
       rrr,
       rsi: rsi.toFixed(1),
       analysisText,
+      ewLabel,
       status: "Pending",
       tier: "vip", // will be overridden for free signals
       confluenceScore: score,
@@ -374,46 +468,88 @@ export async function analyseSymbol(symbol, interval = "1h", force = false) {
 //  SCAN ENGINE  –  Scan top pairs, run TA, return ranked signals
 // ══════════════════════════════════════════════════════════════════════════════
 
-// Top pairs to scan — high liquidity coins most traders use
+// Verified fallback list — all confirmed active on Binance spot as of 2025
 export const SCAN_PAIRS = [
   "BTCUSDT","ETHUSDT","BNBUSDT","SOLUSDT","XRPUSDT",
   "DOGEUSDT","ADAUSDT","AVAXUSDT","LINKUSDT","DOTUSDT",
-  "MATICUSDT","LTCUSDT","TRXUSDT","ATOMUSDT","NEARUSDT",
+  "LTCUSDT","TRXUSDT","ATOMUSDT","NEARUSDT",
   "APTUSDT","ARBUSDT","OPUSDT","INJUSDT","SUIUSDT",
-  "SEIUSDT","TIAUSDT","WLDUSDT","STXUSDT","RUNEUSDT",
-  "HBARUSDT","VETUSDT","ALGOUSDT","FILUSDT","SANDUSDT",
-  "MANAUSDT","GRTUSDT","AXSUSDT","AAVEUSDT","UNIUSDT",
-  "SHIBUSDT","PEPEUSDT","FLOKIUSDT","1000BONKUSDT","WIFUSDT"
+  "SEIUSDT","TIAUSDT","STXUSDT","RUNEUSDT",
+  "HBARUSDT","VETUSDT","FILUSDT",
+  "GRTUSDT","AAVEUSDT","UNIUSDT",
+  "SHIBUSDT","PEPEUSDT","FLOKIUSDT","WIFUSDT",
+  "ENAUSDT","JUPUSDT","PYTHUSDT","RENDERUSDT","FETUSDT",
+  "ONDOUSDT","TAOUSDT","MOVEUSDT","ZKUSDT","EIGENUSDT"
 ];
 
-// Dynamically fetch top 560 USDT pairs by 24h quote volume
+// Stablecoins & non-crypto assets to always exclude
+const EXCLUDED_SYMBOLS = new Set([
+  "TUSDUSDT","BUSDUSDT","USDCUSDT","DAIUSDT","FDUSDUSDT",
+  "USDTUSDT","EURUSDT","GBPUSDT","AUSDUSDT","PAXUSDT",
+  "SUSDUSDT","USTUSDT","FRAXUSDT","LUSDUSDT","GUSDUSDT",
+  "USDPUSDT","UPERUSDT","AEURUSDT","IDRTUSDT","BIDRUSDT"
+]);
+
+// Fetch ONLY symbols that are actively trading on Binance Spot right now.
+// Uses exchangeInfo (authoritative list) cross-referenced with 24hr volume.
 export async function fetchScanPairs() {
   try {
-    const res = await fetch("https://api.binance.com/api/v3/ticker/24hr");
-    if (!res.ok) throw new Error("Failed to fetch Binance 24hr tickers");
-    const data = await res.json();
-    
-    // Filter to USDT pairs only, ignore leverage / down tokens
-    const usdtPairs = data
-      .filter(d => 
-        d.symbol.endsWith("USDT") && 
-        !d.symbol.includes("UP") && 
-        !d.symbol.includes("DOWN") && 
-        !d.symbol.includes("BULL") && 
-        !d.symbol.includes("BEAR")
-      )
+    console.log("[TA Engine] Fetching active Binance spot symbols via exchangeInfo...");
+
+    // Step 1: Get the authoritative list of all ACTIVE Binance spot USDT pairs
+    const infoRes = await fetch("https://api.binance.com/api/v3/exchangeInfo");
+    if (!infoRes.ok) throw new Error("exchangeInfo fetch failed");
+    const infoData = await infoRes.json();
+
+    // Build a Set of all TRADING USDT pairs on the SPOT market
+    const activeBinanceSpotPairs = new Set(
+      infoData.symbols
+        .filter(s =>
+          s.status === "TRADING" &&
+          s.quoteAsset === "USDT" &&
+          s.isSpotTradingAllowed === true
+        )
+        .map(s => s.symbol)
+    );
+
+    console.log(`[TA Engine] Binance has ${activeBinanceSpotPairs.size} active USDT spot pairs.`);
+
+    // Step 2: Get 24hr volume data for sorting & volume filtering
+    const volRes = await fetch("https://api.binance.com/api/v3/ticker/24hr");
+    if (!volRes.ok) throw new Error("24hr ticker fetch failed");
+    const volData = await volRes.json();
+
+    // Step 3: Cross-reference — only keep pairs that are:
+    //   - In the active Binance spot set
+    //   - Not a stablecoin or excluded asset
+    //   - Not a leveraged/bull/bear token
+    //   - Has at least $500k 24h quote volume
+    const filtered = volData
+      .filter(d => {
+        const sym = d.symbol;
+        if (!activeBinanceSpotPairs.has(sym)) return false;       // Must be active on Binance spot
+        if (EXCLUDED_SYMBOLS.has(sym)) return false;              // No stablecoins
+        if (!sym.endsWith("USDT")) return false;                  // USDT pairs only
+        if (/UP|DOWN|BULL|BEAR|3L|3S|5L|5S/.test(sym)) return false; // No leveraged tokens
+        if (parseFloat(d.quoteVolume) < 500000) return false;    // Min $500k volume
+        return true;
+      })
       .sort((a, b) => parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume));
-    
-    const symbols = usdtPairs.slice(0, 560).map(d => d.symbol);
-    window.allBinanceUsdtPairs = symbols; // Save globally for search autocompletion
-    console.log(`[TA Engine] Fetched ${symbols.length} USDT symbols dynamically.`);
+
+    const symbols = filtered.slice(0, 600).map(d => d.symbol);
+
+    // Make available globally for search autocomplete
+    window.allBinanceUsdtPairs = symbols;
+    console.log(`[TA Engine] ✅ ${symbols.length} verified active Binance spot USDT pairs ready.`);
     return symbols;
+
   } catch (err) {
-    console.warn("[TA Engine] Error fetching symbols dynamically, using fallback SCAN_PAIRS list:", err);
+    console.warn("[TA Engine] Fetch failed, using verified fallback list:", err);
     window.allBinanceUsdtPairs = SCAN_PAIRS;
     return SCAN_PAIRS;
   }
 }
+
 
 // Cache with 15-min expiry to avoid hammering API
 let taCache = null;

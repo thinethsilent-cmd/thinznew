@@ -116,6 +116,9 @@ export function initAuthListeners() {
         if (activeUnsubscribes.messages) {
           activeUnsubscribes.messages();
         }
+        let knownMessageIds = new Set();
+        let isFirstLoad = true;
+
         activeUnsubscribes.messages = subscribeToUserMessages(user.uid, (msgs) => {
           const listEl = document.getElementById("inbox-messages-list");
           const unreadBadge = document.getElementById("inbox-unread-badge");
@@ -131,6 +134,17 @@ export function initAuthListeners() {
             unreadLabel.textContent = unreadCount;
             unreadLabel.classList.toggle("hidden", unreadCount === 0);
           }
+
+          // Trigger toast popups for newly arrived unread messages
+          msgs.forEach(m => {
+            if (!m.read && !knownMessageIds.has(m.id)) {
+              if (!isFirstLoad) {
+                showToastNotification(m.subject, m.body, m.giftAmount);
+              }
+            }
+            knownMessageIds.add(m.id);
+          });
+          isFirstLoad = false;
 
           if (listEl) {
             listEl.innerHTML = "";
@@ -1092,6 +1106,7 @@ function renderFilteredSignals() {
           <div class="signal-analysis">
             <div class="analysis-title">🔬 Confluence Analysis</div>
             <div class="analysis-text">${sig.analysisText || 'Multi-indicator real-time market analysis'}</div>
+            ${sig.ewLabel ? `<div style="margin-top:8px;display:inline-flex;align-items:center;gap:6px;background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.3);padding:4px 10px;border-radius:20px;font-size:0.72rem;color:#a78bfa;font-weight:700;">〜 ${sig.ewLabel}</div>` : ''}
           </div>
           ${metaBadges}
         </div>
@@ -2237,4 +2252,153 @@ function _loadLeaderboard(type) {
   } catch (e) {
     _renderLeaderboard(tbodyId, mockData);
   }
+}
+
+// ------------------------------------------------------------------
+// Mobile menu toggle – wires the hamburger button on all standalone pages
+export function initMobileMenu() {
+  const toggle = document.getElementById("mobile-menu-toggle");
+  const menu = document.getElementById("nav-menu-container");
+  if (!toggle || !menu) return;
+
+  toggle.addEventListener("click", () => {
+    const isActive = menu.classList.toggle("active");
+    toggle.classList.toggle("active", isActive);
+    // Prevent body scroll when menu is open
+    document.body.style.overflow = isActive ? "hidden" : "";
+  });
+
+  // Close menu when a nav link is clicked
+  menu.querySelectorAll("a").forEach(link => {
+    link.addEventListener("click", () => {
+      menu.classList.remove("active");
+      toggle.classList.remove("active");
+      document.body.style.overflow = "";
+    });
+  });
+
+  // Close on outside click
+  document.addEventListener("click", (e) => {
+    if (!menu.contains(e.target) && !toggle.contains(e.target)) {
+      menu.classList.remove("active");
+      toggle.classList.remove("active");
+      document.body.style.overflow = "";
+    }
+  });
+}
+
+// ------------------------------------------------------------------
+// Logout button wiring (shared across all pages)
+function initLogout() {
+  const logoutBtn = document.getElementById("btn-logout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      try {
+        await signOutUser();
+        window.location.href = "home.html";
+      } catch (err) {
+        console.error("Logout error:", err);
+      }
+    });
+  }
+}
+
+// ------------------------------------------------------------------
+// initApp – master initializer called by every page entry file
+// Boots auth, forms, logout, and mobile menu in one call.
+export function initApp() {
+  initAuthListeners();
+  initFormListeners();
+  initLogout();
+  // Wire mobile menu after DOM is ready
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initMobileMenu);
+  } else {
+    initMobileMenu();
+  }
+}
+
+// ------------------------------------------------------------------
+// Toast Notification Popup Helper
+export function showToastNotification(title, body, giftAmount = 0) {
+  let toastContainer = document.getElementById("toast-notification-container");
+  if (!toastContainer) {
+    toastContainer = document.createElement("div");
+    toastContainer.id = "toast-notification-container";
+    toastContainer.style.position = "fixed";
+    toastContainer.style.top = "85px";
+    toastContainer.style.right = "24px";
+    toastContainer.style.zIndex = "99999";
+    toastContainer.style.display = "flex";
+    toastContainer.style.flexDirection = "column";
+    toastContainer.style.gap = "10px";
+    toastContainer.style.pointerEvents = "none";
+    document.body.appendChild(toastContainer);
+  }
+
+  const toast = document.createElement("div");
+  toast.className = "toast-notification-card";
+  toast.style.background = "rgba(12, 16, 32, 0.95)";
+  toast.style.border = "1px solid rgba(46, 196, 160, 0.35)";
+  toast.style.borderRadius = "16px";
+  toast.style.padding = "16px 20px";
+  toast.style.width = "320px";
+  toast.style.boxShadow = "0 20px 40px rgba(0,0,0,0.6), 0 0 20px rgba(46, 196, 160, 0.15)";
+  toast.style.backdropFilter = "blur(12px)";
+  toast.style.pointerEvents = "auto";
+  toast.style.cursor = "pointer";
+  toast.style.transform = "translateX(120%)";
+  toast.style.transition = "transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)";
+  toast.style.position = "relative";
+  toast.style.overflow = "hidden";
+
+  const giftBadge = giftAmount > 0 ? `
+    <div style="margin-top:8px;display:inline-flex;align-items:center;gap:6px;background:rgba(0,255,136,0.12);border:1px solid rgba(0,255,136,0.25);padding:3px 8px;border-radius:20px;font-size:0.7rem;color:#00e676;font-weight:700;">
+      🎁 Gift Received: +$${giftAmount.toFixed(2)}
+    </div>` : "";
+
+  toast.innerHTML = `
+    <div style="position:absolute;top:0;left:0;bottom:0;width:4px;background:var(--color-primary);"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:6px;">
+      <div style="font-size:0.75rem;font-weight:800;color:var(--color-primary);text-transform:uppercase;letter-spacing:1px;display:flex;align-items:center;gap:6px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        New Message
+      </div>
+      <button style="background:none;border:none;color:var(--text-muted);font-size:1.1rem;cursor:pointer;line-height:1;margin-left:auto;padding:0;display:flex;align-items:center;">&times;</button>
+    </div>
+    <strong style="display:block;font-size:0.9rem;color:#fff;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${title}</strong>
+    <p style="margin:0;font-size:0.8rem;color:var(--text-secondary);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${body}</p>
+    ${giftBadge}
+  `;
+
+  // Close event
+  const closeBtn = toast.querySelector("button");
+  const dismiss = () => {
+    toast.style.transform = "translateX(120%)";
+    setTimeout(() => {
+      toast.remove();
+    }, 400);
+  };
+  closeBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    dismiss();
+  });
+
+  // Open inbox panel on click
+  toast.addEventListener("click", () => {
+    dismiss();
+    const inboxBtn = document.getElementById("nav-inbox-btn");
+    if (inboxBtn) inboxBtn.click();
+  });
+
+  toastContainer.appendChild(toast);
+  
+  // Animate in
+  setTimeout(() => {
+    toast.style.transform = "translateX(0)";
+  }, 100);
+
+  // Auto-dismiss after 7 seconds
+  setTimeout(dismiss, 7000);
 }

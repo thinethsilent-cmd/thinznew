@@ -1278,6 +1278,7 @@ function renderFilteredSignals() {
           <div class="signal-analysis">
             <div class="analysis-title">🔬 Confluence Analysis</div>
             <div class="analysis-text">${sig.analysisText || 'Multi-indicator real-time market analysis'}</div>
+            ${sig.ewLabel ? `<div style="margin-top:8px;display:inline-flex;align-items:center;gap:6px;background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.3);padding:4px 10px;border-radius:20px;font-size:0.72rem;color:#a78bfa;font-weight:700;">〜 ${sig.ewLabel}</div>` : ''}
           </div>
           ${metaBadges}
         </div>
